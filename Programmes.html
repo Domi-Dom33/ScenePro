@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ScènePro — Programmes</title>
+<!-- logo du poste Programmes (build/icons/programmes.png, réduit en 64 px) -->
+<link rel="icon" id="favicon" type="image/png" href="data:image/png;base64,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">
 <style>
 :root{
   --bg:#0a0c0f;--panel:#12151a;--panel2:#171b21;--panel3:#1f242c;--line:#262c35;--line2:#343c48;
@@ -20,6 +22,7 @@ input,select{font:inherit;color:inherit}
 .app{display:grid;grid-template-rows:46px 1fr;height:100vh}
 header{display:flex;align-items:center;gap:10px;padding:0 12px;background:#0d1014;border-bottom:1px solid var(--line)}
 .brand{display:flex;align-items:center;gap:9px;font-weight:700;font-size:15px}
+.brand .logo{width:24px;height:24px;display:block}
 .brand .mark{width:22px;height:22px;border-radius:6px;background:linear-gradient(135deg,var(--violet),#5a2bb0);display:grid;place-items:center}
 .brand .mark i{width:0;height:0;border-left:8px solid #fff;border-top:5px solid transparent;border-bottom:5px solid transparent;margin-left:2px}
 .spacer{flex:1}
@@ -134,7 +137,7 @@ kbd{font-family:var(--mono);font-size:11px;padding:1px 5px;border-radius:4px;bac
 <body>
 <div class="app">
   <header>
-    <div class="brand"><div class="mark"><i></i></div>ScènePro Programmes</div>
+    <div class="brand"><img class="logo" id="brandLogo" alt="" width="24" height="24">ScènePro Programmes</div>
     <button class="pill bad" id="conn" title="Connexion à la régie"><i class="led"></i><span id="connLbl">HORS LIGNE</span></button>
     <div class="spacer"></div>
     <button class="btn danger" id="btnStopAll" title="Arrêter tous les programmes et rendre l'antenne à la régie">TOUT RENDRE</button>
@@ -191,6 +194,7 @@ kbd{font-family:var(--mono);font-size:11px;padding:1px 5px;border-radius:4px;bac
 <script>
 'use strict';
 const $ = s => document.querySelector(s);
+$('#brandLogo').src = $('#favicon').href; // même logo que l'icône de l'onglet
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 function fmt(s){ if(!isFinite(s) || s < 0) s = 0; s = Math.floor(s); const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), x = s % 60;
