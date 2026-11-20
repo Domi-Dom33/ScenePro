@@ -79,7 +79,11 @@ const TYPES = {video: 'VIDÉO', image: 'IMAGE', live: 'LIVE'};
 let code = new URLSearchParams(location.search).get('code') || (() => { try{ return localStorage.getItem('scenepro-code') || ''; }catch(e){ return ''; } })();
 let data = null, offset = 0, showDone = (() => { try{ return localStorage.getItem('scenepro-cd-done') === '1'; }catch(e){ return false; } })(), needCode = false, lastOk = 0;
 
+let trying = false;
 async function poll(){
+  // en attente du code : on ne réinterroge pas le serveur tant que l'utilisateur n'a pas validé sa saisie
+  if(needCode && !trying) return;
+  trying = false;
   try{
     const r = await fetch('/api/conducteur' + (code ? '?code=' + encodeURIComponent(code) : ''), {cache: 'no-store'});
     if(r.status === 401 || r.status === 403){ needCode = true; data = null; render(r.status === 403 ? 'Trop d\'essais : patientez 2 minutes.' : (code ? 'Code incorrect.' : '')); return; }
@@ -92,14 +96,15 @@ async function poll(){
 function codeForm(msg){
   $('#main').innerHTML = `<div class="codebox"><b>Code d'accès de la régie</b><div style="color:var(--muted);font-size:13px;margin-top:6px">6 chiffres, affichés dans la régie : Sorties › Accès réseau (ou Fichier › Conducteur).</div>
     <input id="code" inputmode="numeric" maxlength="6" autocomplete="off" value="${esc(code)}"><button id="go">Afficher le conducteur</button>
-    <div style="color:#ffb3b3;font-size:13px;margin-top:10px;min-height:18px">${esc(msg || '')}</div></div>`;
-  const go = () => { code = $('#code').value.replace(/\D/g, ''); poll(); };
+    <div id="codeMsg" style="color:#ffb3b3;font-size:13px;margin-top:10px;min-height:18px">${esc(msg || '')}</div></div>`;
+  const go = () => { code = $('#code').value.replace(/\D/g, ''); trying = true; $('#codeMsg').textContent = 'Vérification…'; poll(); };
   $('#go').onclick = go; $('#code').onkeydown = e => { if(e.key === 'Enter') go(); }; $('#code').focus();
 }
 function render(msg){
   const now = Date.now() + offset;
   $('#clock').textContent = hms(now);
-  if(needCode){ if(!$('#code')) codeForm(msg); else if(msg) codeForm(msg); return; }
+  // le formulaire n'est construit qu'une fois : on ne met à jour que le message, sans effacer la saisie
+  if(needCode){ if(!$('#code')) codeForm(msg); else if(msg != null) $('#codeMsg').textContent = msg; return; }
   const stale = !lastOk || Date.now() - lastOk > 5000;
   if(!data || !data.r){
     $('#state').className = 'pill off'; $('#state').textContent = stale ? 'SERVEUR INJOIGNABLE' : 'RÉGIE FERMÉE';

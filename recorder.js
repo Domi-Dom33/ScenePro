@@ -168,8 +168,33 @@ function startRecorder(opts = {}) {
       push();
     });
     log(`${LABEL[k]} → ${file}`);
+    openPreview(k);
   }
-  function closeFf(k) { const r = rec[k]; if (r.ff) { const f = r.ff; r.ff = null; try { f.stdin.end(); } catch (e) {} setTimeout(() => { try { f.kill(); } catch (e) {} }, 8000); } }
+  // aperçu en direct : un 2e ffmpeg très léger ne décode que les images clés (1 par seconde) et sort des JPEG 320 px
+  function openPreview(k) {
+    const r = rec[k];
+    closePreview(k);
+    const pv = spawn(FFMPEG, ['-hide_banner', '-loglevel', 'error', '-skip_frame', 'nokey', '-i', 'pipe:0', '-an', '-fps_mode', 'passthrough',
+      '-vf', 'scale=320:-2', '-q:v', '7', '-f', 'image2pipe', '-c:v', 'mjpeg', 'pipe:1'], { stdio: ['pipe', 'pipe', 'ignore'], windowsHide: true });
+    r.pv = pv;
+    let buf = Buffer.alloc(0);
+    pv.stdout.on('data', d => {
+      buf = Buffer.concat([buf, d]);
+      if (buf.length > 4e6) buf = Buffer.alloc(0);
+      let end;
+      while ((end = buf.indexOf(Buffer.from([0xff, 0xd9]))) >= 0) {
+        const start = buf.lastIndexOf(Buffer.from([0xff, 0xd8]), end);
+        if (start >= 0) { r.thumb = buf.subarray(start, end + 2); r.thumbAt = Date.now(); r.thumbLuma = lumaHint(r.thumb); }
+        buf = buf.subarray(end + 2);
+      }
+    });
+    pv.stdin.on('error', () => {});
+    pv.on('error', () => {});
+  }
+  function closePreview(k) { const r = rec[k]; if (r.pv) { const p = r.pv; r.pv = null; try { p.stdin.end(); } catch (e) {} setTimeout(() => { try { p.kill(); } catch (e) {} }, 3000); } }
+  // très petit JPEG = image unie (souvent noire) : utile pour prévenir « image noire » sans décoder
+  function lumaHint(jpg) { return jpg.length < 1000 ? 'flat' : 'ok'; }
+  function closeFf(k) { closePreview(k); const r = rec[k]; if (r.ff) { const f = r.ff; r.ff = null; try { f.stdin.end(); } catch (e) {} setTimeout(() => { try { f.kill(); } catch (e) {} }, 8000); } }
   function startRec(k) {
     const r = rec[k];
     if (r.status === 'rec' || r.status === 'wait') return;
@@ -188,6 +213,7 @@ function startRecorder(opts = {}) {
       if (r.ws !== ws) return;
       if (isBinary) {
         if (r.ff && r.ff.stdin.writable) { r.ff.stdin.write(d); r.bytes += d.length; }
+        if (r.pv && r.pv.stdin.writable && r.pv.stdin.writableLength < 8e6) r.pv.stdin.write(d);
         return;
       }
       let m; try { m = JSON.parse(d.toString()); } catch (e) { return; }
@@ -234,7 +260,7 @@ function startRecorder(opts = {}) {
   /* ---------- interface (page enregistreur.html) ---------- */
   function state() {
     const s = { type: 'state', cfg, link, found, test, ffmpeg: FFMPEG, disk: disk(), recent: recent.slice(0, 12).map(x => ({ name: path.basename(x.file), size: x.size, t: x.t, source: x.source })), sources: {} };
-    SOURCES.forEach(k => { const r = rec[k]; s.sources[k] = { status: r.status, uptime: r.t0 ? Date.now() - r.t0 : 0, bytes: r.bytes, kbps: r.kbps, file: r.file ? path.basename(r.file) : '', err: r.err, part: r.part }; });
+    SOURCES.forEach(k => { const r = rec[k]; s.sources[k] = { thumbAt: r.status === 'rec' ? (r.thumbAt || 0) : 0, flat: r.thumbLuma === 'flat', status: r.status, uptime: r.t0 ? Date.now() - r.t0 : 0, bytes: r.bytes, kbps: r.kbps, file: r.file ? path.basename(r.file) : '', err: r.err, part: r.part }; });
     return s;
   }
   function push() { const m = JSON.stringify(state()); uiClients.forEach(c => { if (c.readyState === 1) c.send(m); }); sendStatus(); }
@@ -245,6 +271,12 @@ function startRecorder(opts = {}) {
 
   const server = http.createServer((req, res) => {
     const u = new URL(req.url, 'http://x');
+    const pm = u.pathname.match(/^\/preview\/(pgm1|pgm2|pgm3|web)\.jpg$/);
+    if (pm) {
+      const t = rec[pm[1]].thumb;
+      if (!t) { res.writeHead(404); return res.end(); }
+      res.writeHead(200, { 'Content-Type': 'image/jpeg', 'Cache-Control': 'no-store' }); return res.end(t);
+    }
     if (u.pathname === '/logo.png' || u.pathname === '/favicon.ico') {
       fs.readFile(path.join(root, 'build', 'icons', 'enregistreur.png'), (err, buf) => {
         if (err) { res.writeHead(404); return res.end(); }

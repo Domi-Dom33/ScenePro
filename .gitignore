@@ -2,3 +2,4 @@ node_modules/
 dist/
 *.log
 ffmpeg.exe
+.claude/
