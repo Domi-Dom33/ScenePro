@@ -15,6 +15,7 @@ const os = require('os');
 const { spawn } = require('child_process');
 const WebSocket = require('ws');
 const { WebSocketServer } = require('ws');
+const discovery = require('./discovery');
 
 const SOURCES = ['pgm1', 'pgm2', 'pgm3', 'web'];
 const LABEL = { pgm1: 'PGM 1', pgm2: 'PGM 2', pgm3: 'PGM 3', web: 'WEB' };
@@ -59,6 +60,28 @@ function startRecorder(opts = {}) {
   SOURCES.forEach(s => rec[s] = { status: 'idle', ws: null, ff: null, file: '', t0: 0, bytes: 0, lastBytes: 0, kbps: 0, err: '', part: 0, mime: '', stopping: false });
   const recent = [];
   const uiClients = new Set();
+  // régies trouvées automatiquement sur le réseau (annonces UDP) + résultat du dernier test d'adresse
+  let found = [], test = null;
+  const disc = discovery.listen(l => { found = l; push(); });
+  function testRegie(target) {
+    const t = (target || cfg.regie).trim().replace(/^https?:\/\//, '').replace(/\/.*$/, '');
+    test = { target: t, status: 'testing' }; push();
+    const req = http.get('http://' + t + '/api/hello', { timeout: 3000 }, res => {
+      let b = ''; res.on('data', d => b += d); res.on('end', () => {
+        try { const j = JSON.parse(b); if (j.app !== 'ScenePro') throw 0; test = { target: t, status: 'ok', name: j.name, version: j.version, regieOuverte: j.regieOuverte }; }
+        catch (e) { test = { target: t, status: 'bad', err: "Ce n'est pas une régie ScènePro (mauvais port ?)" }; }
+        push();
+      });
+    });
+    req.on('timeout', () => req.destroy(new Error('timeout')));
+    req.on('error', e => {
+      const code = e.code || (e.errors && e.errors[0] && e.errors[0].code) || '';
+      test = { target: t, status: 'bad', err: e.message === 'timeout' ? 'Aucune réponse : adresse incorrecte, régie éteinte ou pare-feu'
+        : code === 'ECONNREFUSED' ? 'Ordinateur joignable mais aucune régie sur ce port'
+        : code === 'ENOTFOUND' ? 'Nom d\'ordinateur inconnu : utilisez son adresse IP' : 'Introuvable : ' + (e.message || code) };
+      push();
+    });
+  }
 
   /* ---------- liaison avec la régie ---------- */
   let ctl = null, ctlTimer = null, closing = false;
@@ -210,7 +233,7 @@ function startRecorder(opts = {}) {
 
   /* ---------- interface (page enregistreur.html) ---------- */
   function state() {
-    const s = { type: 'state', cfg, link, ffmpeg: FFMPEG, disk: disk(), recent: recent.slice(0, 12).map(x => ({ name: path.basename(x.file), size: x.size, t: x.t, source: x.source })), sources: {} };
+    const s = { type: 'state', cfg, link, found, test, ffmpeg: FFMPEG, disk: disk(), recent: recent.slice(0, 12).map(x => ({ name: path.basename(x.file), size: x.size, t: x.t, source: x.source })), sources: {} };
     SOURCES.forEach(k => { const r = rec[k]; s.sources[k] = { status: r.status, uptime: r.t0 ? Date.now() - r.t0 : 0, bytes: r.bytes, kbps: r.kbps, file: r.file ? path.basename(r.file) : '', err: r.err, part: r.part }; });
     return s;
   }
@@ -264,6 +287,12 @@ function startRecorder(opts = {}) {
         push();
       }
       else if (m.type === 'reconnect') connectCtl();
+      else if (m.type === 'test') testRegie(m.target);
+      else if (m.type === 'use' && m.host && m.port) {
+        cfg.regie = String(m.host).trim() + ':' + (parseInt(m.port, 10) || 7350);
+        if (m.local) cfg.code = '';
+        saveCfg(); connectCtl(); testRegie(); push();
+      }
       else if (m.type === 'openFolder') { try { fs.mkdirSync(cfg.folder, { recursive: true }); openPath(cfg.folder); } catch (e) {} }
       else if (m.type === 'openFile' && m.name) { const f = path.join(cfg.folder, path.basename(m.name)); if (fs.existsSync(f)) openPath(f); }
       else if (m.type === 'pickFolder' && opts.pickFolder) { const f = await opts.pickFolder(cfg.folder); if (f) { cfg.folder = f; saveCfg(); push(); } }
@@ -282,7 +311,7 @@ function startRecorder(opts = {}) {
           port: PORT, url: `http://localhost:${PORT}/`,
           recording: () => SOURCES.some(k => rec[k].status !== 'idle'),
           close() {
-            closing = true; clearInterval(tick); clearTimeout(ctlTimer);
+            closing = true; clearInterval(tick); clearTimeout(ctlTimer); disc.close();
             SOURCES.forEach(stopRec);
             if (ctl) { try { ctl.terminate(); } catch (e) {} }
             wssUi.clients.forEach(c => c.terminate());

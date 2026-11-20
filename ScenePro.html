@@ -1583,7 +1583,7 @@ const DB = (() => {
     all: st => tx(st, 'readonly', s => s.getAll()),
   };
 })();
-const FIELDS = ['id','name','fileName','type','handle','thumb','duration','w','h','loop','audio','volume','imageDuration','endAction','transition','deviceId','audioId','resW','resH'];
+const FIELDS = ['id','name','fileName','type','handle','thumb','duration','w','h','loop','audio','volume','imageDuration','endAction','transition','deviceId','audioId','resW','resH','plannedAt','plannedDur'];
 function serialize(){
   return { name: state.showName, fadeMs: state.fadeMs, savedAt: Date.now(),
     items: state.items.filter(i => i.handle || i.type === 'live').map(i => Object.fromEntries(FIELDS.map(f => [f, i[f]]))) };
@@ -2028,6 +2028,12 @@ function renderInspector(){
     <div class="field" style="border-top:1px solid var(--line);padding-top:12px;margin-top:2px"><label>À la fin ${v && it.loop ? '<span style="text-transform:none;letter-spacing:0;color:var(--dim)">(inactif en boucle)</span>' : ''}</label>
       ${seg('endAction', [['hold', v ? 'Dernière image' : 'Rester'], ['next', 'Suivant auto'], ['black', 'Noir']])}
       <div class="hint">${it.endAction === 'next' ? 'Enchaîne automatiquement le média suivant de la liste.' : it.endAction === 'black' ? 'Fait un fondu au noir quand le média se termine.' : v ? 'La vidéo reste figée sur sa dernière image.' : 'L\'image reste à l\'écran.'}</div></div>`}
+    <div class="field" style="border-top:1px solid var(--line);padding-top:12px"><label>Conducteur</label>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div><div class="hint" style="margin:0 0 4px">Heure prévue</div><input class="txt" type="time" step="1" data-f="plannedAt" value="${esc(it.plannedAt || '')}"></div>
+        <div><div class="hint" style="margin:0 0 4px">Durée prévue (min:s)</div><input class="txt" data-f="plannedDur" placeholder="${durHint(it)}" value="${it.plannedDur ? fmt(it.plannedDur) : ''}"></div>
+      </div>
+      <div class="hint">L'heure estimée de passage se recalcule en direct dans le conducteur (Fichier › Conducteur). La durée prévue sert quand le média n'a pas de durée (image fixe, live, boucle).</div></div>
     <div class="field"><label>Transition d'entrée (SUIVANT / auto)</label>${seg('transition', [['fade', 'Fondu'], ['cut', 'Cut']])}</div>
     <div class="btnrow"><button class="btn red" id="iSend">${I.send}Envoyer à l'antenne</button></div>
     <div class="btnrow">${lv ? '' : `<button class="btn" id="iApply" title="Copier ces réglages sur tous les médias du même type">Appliquer à toutes les ${v ? 'vidéos' : 'images'}</button>`}<button class="btn danger" id="iDel">${I.x}Retirer</button></div>`;
@@ -2039,6 +2045,8 @@ function renderInspector(){
       else if(f === 'loop' || f === 'audio') it[f] = inp.checked;
       else if(f === 'volume'){ it.volume = inp.value / 100; $('#volLbl').textContent = inp.value + '%'; }
       else if(f === 'imageDuration') it.imageDuration = Math.max(0, +inp.value || 0);
+      else if(f === 'plannedAt') it.plannedAt = inp.value || '';
+      else if(f === 'plannedDur') it.plannedDur = parseDur(inp.value);
       liveUpdate(it);
       if(f === 'name'){ renderMonitors(); const c = document.querySelector(`.card[data-id="${it.id}"] .nm`); if(c) c.textContent = it.name; }
       else if(f !== 'volume') { renderBin(); if(f !== 'imageDuration') renderInspector(); }
@@ -2071,6 +2079,8 @@ const MENUS = {
     {sep: true},
     {label: 'Enregistrer / ouvrir un show…', kbd: 'Ctrl+S', action: showsDialog},
     {label: 'Nouveau show', action: newShow},
+    {sep: true},
+    {label: 'Conducteur (page web : Chrome, tablette…)…', action: rundownDialog},
   ],
   outputs: () => [
     {head: 'Sorties vidéo (HDMI, carte vidéo, projecteur)'},
@@ -2710,6 +2720,76 @@ function renderProgPill(){
   p.title = (Prog.postes.length ? 'Postes Programmes connectés : ' + Prog.postes.join(', ') + '\n' : '') + 'Programmes (reportages, clips) — cliquer pour ouvrir le poste Programmes';
 }
 setInterval(() => Prog.push(false), 500);
+
+/* =========================================================
+   CONDUCTEUR — ce qui reste à diffuser sur le PGM 1, avec heures prévues et heures estimées
+   La régie calcule le conducteur chaque seconde et l'envoie au serveur ; la page /conducteur
+   (Chrome, Edge, tablette, téléphone…) l'affiche, sur cet ordinateur ou ailleurs sur le réseau.
+   ========================================================= */
+function parseDur(v){
+  v = String(v || '').trim(); if(!v) return 0;
+  const p = v.split(/[:h']/).map(x => parseFloat(x.replace(',', '.')) || 0);
+  if(p.length === 1) return Math.round(p[0] * 60);            // « 5 » = 5 minutes
+  if(p.length === 2) return Math.round(p[0] * 60 + p[1]);      // min:s
+  return Math.round(p[0] * 3600 + p[1] * 60 + p[2]);           // h:min:s
+}
+function itemDur(it){
+  if(!it) return 0;
+  if(it.type === 'video') return (it.loop ? 0 : (it.duration || 0)) || it.plannedDur || 0;
+  if(it.type === 'image') return it.imageDuration || it.plannedDur || 0;
+  return it.plannedDur || 0;
+}
+function durHint(it){ const d = it.type === 'video' && !it.loop && it.duration ? it.duration : it.type === 'image' && it.imageDuration ? it.imageDuration : 0; return d ? fmt(d) + ' (auto)' : 'ex. 5:00'; }
+const hhmmss = t => { const d = new Date(t); return [d.getHours(), d.getMinutes(), d.getSeconds()].map(n => String(n).padStart(2, '0')).join(':'); };
+function plannedToday(hms){
+  if(!hms) return null;
+  const [h, m, s] = hms.split(':').map(n => parseInt(n, 10) || 0);
+  const d = new Date(); d.setHours(h, m, s || 0, 0); return d.getTime();
+}
+function computeRundown(){
+  const b = Engine.buses[0], cur = b.item, now = Date.now();
+  const idx = cur ? state.items.indexOf(cur) : -1;
+  const t = busTime(b);
+  let curRemain = 0, curElapsed = 0;
+  if(cur){ curElapsed = t.cur || 0; const d = isFinite(t.dur) ? t.dur : (cur.plannedDur || 0); curRemain = Math.max(0, d - curElapsed); }
+  let cursor = now + curRemain * 1000;
+  const rows = state.items.map((it, i) => {
+    const dur = itemDur(it), planned = plannedToday(it.plannedAt);
+    let status = idx < 0 ? 'todo' : i < idx ? 'done' : i === idx ? 'air' : 'todo';
+    let start = null;
+    if(status === 'air') start = now - curElapsed * 1000;
+    else if(status === 'todo'){ start = cursor; cursor += dur * 1000; }
+    return { n: i + 1, id: it.id, name: it.name, type: it.type, dur, durKnown: !!dur, plannedAt: it.plannedAt || '', planned, start,
+      delta: planned && start ? Math.round((start - planned) / 1000) : null, status, ready: isReady(it), next: false };
+  });
+  const firstTodo = rows.find(r => r.status === 'todo'); if(firstTodo) firstTodo.next = true;
+  const unknown = rows.filter(r => r.status === 'todo' && !r.durKnown).length;
+  return { at: now, show: state.showName, onAir: cur ? cur.name : null, curElapsed, curRemain, curDur: isFinite(t.dur) ? t.dur : (cur && cur.plannedDur) || 0,
+    black: b.black, paused: b.paused, end: cursor, unknown, rows };
+}
+const Rundown = {
+  last: '',
+  push(){
+    if(!Remote.ws || Remote.ws.readyState !== 1) return;
+    const r = computeRundown();
+    const j = JSON.stringify(r);
+    if(j === this.last) return; this.last = j;
+    Remote.ws.send(JSON.stringify({type: 'rundown', r}));
+  },
+};
+setInterval(() => Rundown.push(), 1000);
+function rundownDialog(){
+  const L = Gfx.lan || {}, ips = (L.ips || []).map(a => a.ip), port = L.port || location.port || 7350;
+  openModal('Conducteur', `
+    <p class="info">Le conducteur montre ce qui reste à diffuser sur le <b>PGM 1</b>, avec l'heure prévue de chaque média et l'heure estimée de passage, recalculée en direct (retard en rouge, avance en vert). Il s'ouvre dans <b>n'importe quel navigateur</b> : Chrome, Edge, une tablette, un téléphone…</p>
+    <div class="flabel">Sur cet ordinateur</div>
+    <div class="showrow"><div class="n"><b style="font-family:var(--mono);user-select:text">http://localhost:${port}/conducteur</b></div><button class="btn sm" id="cdOpen">Ouvrir</button><button class="btn sm" data-copy="http://localhost:${port}/conducteur">Copier</button></div>
+    <div class="flabel" style="margin-top:14px">Depuis un autre appareil du réseau</div>
+    ${ips.length ? ips.map(ip => `<div class="showrow" style="margin-bottom:6px"><div class="n"><b style="font-family:var(--mono);user-select:text">http://${ip}:${port}/conducteur</b></div><button class="btn sm" data-copy="http://${ip}:${port}/conducteur">Copier</button></div>`).join('') : '<p class="hint">Aucune adresse réseau détectée.</p>'}
+    <p class="hint">Code d'accès demandé sur les autres appareils : <b style="font-family:var(--mono);color:var(--text)">${esc(L.pin || '—')}</b> (Sorties › Accès réseau). Réglez l'heure et la durée prévues de chaque média dans « Programmation ».</p>`);
+  $('#cdOpen').onclick = () => window.open('/conducteur', 'scenepro_conducteur', 'popup=yes,width=1100,height=800');
+  $('#mBody').querySelectorAll('[data-copy]').forEach(b => b.onclick = () => navigator.clipboard.writeText(b.dataset.copy).then(() => toast('Adresse copiée.')));
+}
 
 /* ---------------- Démarrage ---------------- */
 Engine.pvw = new Stage(window, $('#pvwStage'), {});

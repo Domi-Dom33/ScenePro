@@ -36,10 +36,44 @@ function startSyntheServer(opts = {}) {
   const FILES = { '/': ['Synthe.html', 'text/html'], '/synthe': ['Synthe.html', 'text/html'], '/Synthe.html': ['Synthe.html', 'text/html'],
     '/gfx-render.js': ['gfx-render.js', 'text/javascript'] };
 
+  // détection automatique des régies qui s'annoncent sur le réseau (UDP 7399)
+  let disc = null;
+  try { disc = require('./discovery').listen(() => {}); } catch (e) { log('détection des régies indisponible : ' + e.message); }
+
   const server = http.createServer((req, res) => {
     const url = new URL(req.url, 'http://x');
     // anti « DNS rebinding » : uniquement les pages ouvertes sur localhost
     if (!/^(localhost|127\.0\.0\.1)(:\d+)?$/.test(req.headers.host || '')) { res.writeHead(403); return res.end(); }
+    if (url.pathname === '/api/regies') {
+      res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
+      // disc.list() : liste à jour (les régies disparues depuis plus de 7 s en sont retirées)
+      const list = disc ? disc.list().sort((a, b) => (b.local - a.local) || String(a.name).localeCompare(b.name)) : [];
+      return res.end(JSON.stringify({ ok: true, regies: list, detection: !!disc }));
+    }
+    if (url.pathname === '/api/test') {
+      // « Tester l'adresse » : interroge /api/hello de la régie et explique précisément ce qui ne va pas
+      res.setHeader('Content-Type', 'application/json; charset=utf-8');
+      const host = String(url.searchParams.get('host') || '').trim(), port = parseInt(url.searchParams.get('port'), 10);
+      if (!/^[a-zA-Z0-9.\-]{1,253}$/.test(host)) { res.writeHead(200); return res.end(JSON.stringify({ ok: false, why: 'adresse', msg: 'Adresse IP invalide.' })); }
+      if (!(port > 0 && port < 65536)) { res.writeHead(200); return res.end(JSON.stringify({ ok: false, why: 'port', msg: 'Port invalide (1 à 65535, 7350 par défaut).' })); }
+      let done = false;
+      const reply = o => { if (done) return; done = true; res.writeHead(200); res.end(JSON.stringify(o)); };
+      const rq = http.get({ host, port, path: '/api/hello', timeout: 2500 }, r => {
+        let b = ''; r.on('data', d => { if (b.length < 8192) b += d; });
+        r.on('end', () => {
+          let j = null; try { j = JSON.parse(b); } catch (e) {}
+          if (!j || j.app !== 'ScenePro' || j.role !== 'regie') return reply({ ok: false, why: 'pas-scenepro', msg: `Un autre logiciel répond sur ${host}:${port} : ce n'est pas une régie ScènePro (vérifiez le port).` });
+          reply({ ok: true, name: j.name, port: j.port, version: j.version, lan: j.lan, regieOuverte: !!j.regieOuverte });
+        });
+      });
+      rq.on('timeout', () => { rq.destroy(); reply({ ok: false, why: 'injoignable', msg: `Aucune réponse de ${host} : adresse IP fausse, ordinateur éteint, autre réseau ou pare-feu.` }); });
+      rq.on('error', e => {
+        if (e.code === 'ECONNREFUSED') reply({ ok: false, why: 'refus', msg: `L'ordinateur ${host} répond, mais rien n'écoute sur le port ${port} : régie ScènePro fermée ou mauvais port.` });
+        else if (e.code === 'ENOTFOUND') reply({ ok: false, why: 'adresse', msg: `Nom d'ordinateur « ${host} » introuvable.` });
+        else reply({ ok: false, why: 'injoignable', msg: `Aucune réponse de ${host} (${e.code || e.message}) : adresse IP fausse, autre réseau ou pare-feu.` });
+      });
+      return;
+    }
     if (url.pathname === '/api/conducteur') {
       res.setHeader('Content-Type', 'application/json; charset=utf-8');
       res.setHeader('Cache-Control', 'no-store');
@@ -82,7 +116,7 @@ function startSyntheServer(opts = {}) {
       server.once('error', e => { if (e.code === 'EADDRINUSE' && opts.portFallback !== false && tries < 20) { tries++; PORT++; tryListen(); } else reject(e); });
       server.listen(PORT, '127.0.0.1', () => {
         log(`poste Synthé sur http://localhost:${PORT}/`);
-        resolve({ port: PORT, url: `http://localhost:${PORT}/`, close: () => new Promise(r => server.close(() => r())) });
+        resolve({ port: PORT, url: `http://localhost:${PORT}/`, close: () => { if (disc) disc.close(); return new Promise(r => server.close(() => r())); } });
       });
     };
     tryListen();

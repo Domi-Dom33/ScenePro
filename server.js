@@ -15,6 +15,7 @@ const os = require('os');
 const { spawn, execFileSync } = require('child_process');
 const { WebSocketServer } = require('ws');
 const createBusFeed = require('./busfeed');
+const discovery = require('./discovery');
 
 const VERSION = (() => { try { return require('./package.json').version; } catch (e) { return '0.0.0'; } })();
 const COMMANDS = ['auto', 'cut', 'next', 'black', 'pause', 'restart', 'mute', 'prev', 'pvwnext', 'cue',
@@ -66,11 +67,12 @@ function startServer(opts = {}) {
   const fails = new Map();
   const blocked = ip => { const f = fails.get(ip); return f && f.n >= 8 && Date.now() - f.t < 120000; };
   const fail = ip => { const f = fails.get(ip) || { n: 0, t: 0 }; if (Date.now() - f.t > 120000) f.n = 0; f.n++; f.t = Date.now(); fails.set(ip, f); };
-  const REMOTE_OK = /^\/(synthe|Synthe\.html|overlay|overlay\.html|programmes|Programmes\.html|gfx-render\.js|favicon\.ico|api\/cmd\/.*|api\/gfx\/.*|api\/state|api\/prog\/.*|api\/progcmd\/.*|prog\/media\/.*)$/;
+  const REMOTE_OK = /^\/(synthe|Synthe\.html|overlay|overlay\.html|programmes|Programmes\.html|gfx-render\.js|favicon\.ico|api\/cmd\/.*|api\/gfx\/.*|api\/state|api\/hello|api\/conducteur|conducteur|conducteur\.html|api\/prog\/.*|api\/progcmd\/.*|prog\/media\/.*)$/;
   const lanInfo = () => ({ enabled: LAN, port: PORT, pin: PIN, ips: lanIps() });
 
   const controlClients = new Set();
   let lastState = {};
+  let rundown = null; // conducteur calculé par la régie (page /conducteur)
   let PORT = opts.port || 7350;
   let allowed = [];
 
@@ -135,7 +137,8 @@ function startServer(opts = {}) {
     }
     const STATIC = { '/synthe': ['Synthe.html', 'text/html'], '/Synthe.html': ['Synthe.html', 'text/html'], '/overlay': ['overlay.html', 'text/html'],
       '/overlay.html': ['overlay.html', 'text/html'], '/gfx-render.js': ['gfx-render.js', 'text/javascript'],
-      '/programmes': ['Programmes.html', 'text/html'], '/Programmes.html': ['Programmes.html', 'text/html'] };
+      '/programmes': ['Programmes.html', 'text/html'], '/Programmes.html': ['Programmes.html', 'text/html'],
+      '/conducteur': ['conducteur.html', 'text/html'], '/conducteur.html': ['conducteur.html', 'text/html'] };
     if (STATIC[url.pathname]) {
       const [file, type] = STATIC[url.pathname];
       fs.readFile(path.join(root, file), (err, buf) => {
@@ -152,6 +155,23 @@ function startServer(opts = {}) {
         res.end(buf);
       });
       return;
+    }
+    // identification sans code : un poste vérifie qu'il parle bien à une régie ScènePro (adresse et port corrects)
+    // conducteur : lisible sans code sur cet ordinateur, avec le code d'accès ailleurs sur le réseau
+    if (url.pathname === '/api/conducteur') {
+      res.setHeader('Content-Type', 'application/json; charset=utf-8'); res.setHeader('Cache-Control', 'no-store');
+      if (!isLoopback(req)) {
+        const ip = remoteIp(req);
+        if (!LAN || blocked(ip)) { res.writeHead(403); return res.end('{"ok":false,"error":"bloque"}'); }
+        if (url.searchParams.get('code') !== PIN) { fail(ip); res.writeHead(401); return res.end('{"ok":false,"error":"code"}'); }
+        fails.delete(ip);
+      }
+      res.writeHead(200);
+      return res.end(JSON.stringify({ ok: true, now: Date.now(), regie: controlClients.size > 0, r: rundown }));
+    }
+    if (url.pathname === '/api/hello') {
+      res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', 'Access-Control-Allow-Origin': '*' });
+      return res.end(JSON.stringify({ app: 'ScenePro', role: 'regie', name: os.hostname(), port: PORT, version: VERSION, lan: LAN, regieOuverte: controlClients.size > 0 }));
     }
     if (url.pathname === '/api/status') {
       res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
@@ -207,6 +227,7 @@ function startServer(opts = {}) {
     gfxPeers();
     ws.on('message', d => { try { const m = JSON.parse(d.toString()); if (m.type === 'state') { lastState = m.state || {}; toStations({ type: 'regie', state: lastState }); }
       else if (m.type === 'progstatus' && m.s && typeof m.s === 'object') { progStatus = m.s; toProg({ type: 'status', s: progStatus, regies: controlClients.size }); }
+      else if (m.type === 'rundown' && m.r && typeof m.r === 'object') rundown = m.r;
       else if (m.type === 'enr-cmd' && /^enr-(start|stop|toggle)$/.test(m.cmd)) busfeed.cmd(m.cmd, m.arg == null ? null : clampInt(m.arg, 1, 4, 1)); } catch (e) {} });
     busfeed.hello(ws); busfeed.regieChanged();
     ws.send(JSON.stringify(streamSummary()));
@@ -467,6 +488,7 @@ function startServer(opts = {}) {
     ws.on('close', () => { feedClients.delete(ws); log(`Poste Diffusion déconnecté (${ws._ip})`); stationsChanged(); });
   });
 
+  let announcer = null;
   return new Promise((resolve, reject) => {
     let tries = 0;
     const tryListen = () => {
@@ -479,10 +501,12 @@ function startServer(opts = {}) {
         log(`ScènePro ${VERSION} — régie sur http://localhost:${PORT}/`);
         if (LAN) lanIps().forEach(a => log(`Poste Synthé depuis un autre ordinateur : http://${a.ip}:${PORT}/synthe  (code d'accès ${PIN})`));
         if (LAN) lanIps().forEach(a => log(`Poste Diffusion : adresse ${a.ip}, port ${PORT}, code d'accès ${PIN}`));
+        // annonce sur le réseau : les postes trouvent la régie tout seuls (le code n'est jamais diffusé)
+        if (LAN) announcer = discovery.announce(() => ({ port: PORT, ips: lanIps().map(a => a.ip), version: VERSION }));
         resolve({
           port: PORT, url: `http://localhost:${PORT}/`,
           close() {
-            wss.clients.forEach(c => c.terminate()); wssCtl.clients.forEach(c => c.terminate()); wssGfx.clients.forEach(c => c.terminate()); wssFeed.clients.forEach(c => c.terminate()); wssProg.clients.forEach(c => c.terminate()); busfeed.close();
+            wss.clients.forEach(c => c.terminate()); wssCtl.clients.forEach(c => c.terminate()); wssGfx.clients.forEach(c => c.terminate()); wssFeed.clients.forEach(c => c.terminate()); wssProg.clients.forEach(c => c.terminate()); busfeed.close(); if (announcer) announcer.close();
             return new Promise(r => server.close(() => r()));
           },
         });

@@ -70,6 +70,17 @@ label.f{display:block;font-size:10.5px;letter-spacing:1.1px;font-weight:700;colo
 .seg button.on{background:var(--panel3);color:#fff;box-shadow:inset 0 0 0 1px var(--line2)}
 .hint{font-size:11.5px;color:var(--dim);line-height:1.45}
 .sep{height:1px;background:var(--line)}
+.row3{display:grid;grid-template-columns:1fr 90px;gap:6px}
+.found{display:flex;flex-direction:column;gap:4px}
+.found button{display:flex;align-items:center;gap:8px;text-align:left;padding:7px 9px;border-radius:7px;border:1px solid var(--line2);background:var(--panel2);cursor:pointer}
+.found button:hover{border-color:var(--accent)}
+.found button.cur{border-color:var(--green);background:rgba(31,209,107,.08)}
+.found button b{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.found button i{font-style:normal;font-family:var(--mono);font-size:11px;color:var(--muted)}
+.found .none{font-size:11.5px;color:var(--dim);padding:4px 2px}
+.btn.primaryb{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+.testres{font-size:12px;min-height:16px}
+.testres.ok{color:#9ef0bf}.testres.bad{color:#ffb3b3}.testres.wait{color:#ffd27a}
 .recent{display:flex;flex-direction:column;gap:4px;max-height:260px;overflow:auto}
 .recent div{display:flex;gap:8px;align-items:center;padding:5px 8px;border-radius:6px;background:var(--panel2);cursor:pointer;font-size:11.5px}
 .recent div:hover{background:var(--panel3)}
@@ -97,8 +108,14 @@ label.f{display:block;font-size:10.5px;letter-spacing:1.1px;font-weight:700;colo
   <section class="tiles" id="tiles"></section>
   <aside class="panel">
     <h3>Liaison avec la régie</h3>
-    <div><label class="f">Adresse de la régie</label><div class="row2"><input class="txt" id="cRegie" placeholder="localhost:7350 ou 192.168.1.20:7350" spellcheck="false"><button class="btn" id="bRe">Connecter</button></div></div>
+    <div><label class="f">Régies trouvées sur le réseau</label><div class="found" id="found"></div></div>
+    <div class="row3">
+      <div><label class="f">Adresse IP</label><input class="txt" id="cHost" placeholder="192.168.1.20 ou localhost" spellcheck="false"></div>
+      <div><label class="f">Port</label><input class="txt" id="cPort" placeholder="7350" inputmode="numeric" maxlength="5"></div>
+    </div>
     <div><label class="f">Code d'accès (autre ordinateur)</label><input class="txt" id="cCode" placeholder="6 chiffres — Régie › Sorties › Accès réseau" inputmode="numeric" maxlength="6"></div>
+    <div class="row2"><button class="btn" id="bTest" style="flex:1">Tester l'adresse</button><button class="btn primaryb" id="bRe" style="flex:1">Connecter</button></div>
+    <div class="testres" id="testRes"></div>
     <div class="hint" id="linkHint"></div>
     <div class="sep"></div>
     <h3>Fichiers</h3>
@@ -140,14 +157,17 @@ function connect(){
   ws.onclose = () => { $('#lLink').textContent = 'MOTEUR ARRÊTÉ'; $('#pLink').className = 'pill bad'; setTimeout(connect, 2000); };
 }
 let editing = null;
-['cRegie', 'cCode', 'cFolder', 'cPrefix'].forEach(id => {
+['cHost', 'cPort', 'cCode', 'cFolder', 'cPrefix'].forEach(id => {
   const el = $('#' + id);
   el.addEventListener('focus', () => editing = id);
   el.addEventListener('blur', () => { editing = null; saveCfg(); });
   el.addEventListener('keydown', e => { if(e.key === 'Enter') el.blur(); });
 });
-function saveCfg(){ send({type: 'cfg', cfg: {regie: $('#cRegie').value, code: $('#cCode').value, folder: $('#cFolder').value, prefix: $('#cPrefix').value}}); }
-$('#bRe').onclick = () => { saveCfg(); send({type: 'reconnect'}); };
+const regieAddr = () => ($('#cHost').value.trim() || 'localhost') + ':' + (parseInt($('#cPort').value, 10) || 7350);
+function saveCfg(){ send({type: 'cfg', cfg: {regie: regieAddr(), code: $('#cCode').value.replace(/D/g, ''), folder: $('#cFolder').value, prefix: $('#cPrefix').value}}); }
+$('#bRe').onclick = () => { saveCfg(); send({type: 'reconnect'}); send({type: 'test'}); };
+$('#bTest').onclick = () => send({type: 'test', target: regieAddr()});
+$('#found').addEventListener('click', e => { const b = e.target.closest('button[data-host]'); if(b) send({type: 'use', host: b.dataset.host, port: +b.dataset.port, local: b.dataset.local === '1'}); });
 $('#bOpen').onclick = () => send({type: 'openFolder'});
 $('#bPick').onclick = () => send({type: 'pickFolder'});
 $('#sFormat').onclick = e => { const b = e.target.closest('button'); if(b) send({type: 'cfg', cfg: {format: b.dataset.v}}); };
@@ -168,7 +188,15 @@ $('#recent').addEventListener('click', e => { const d = e.target.closest('[data-
 function render(){
   if(!st) return;
   const c = st.cfg, L = st.link;
-  if(editing !== 'cRegie') $('#cRegie').value = c.regie;
+  const [hh, pp] = String(c.regie || 'localhost:7350').split(':');
+  if(editing !== 'cHost') $('#cHost').value = hh || 'localhost';
+  if(editing !== 'cPort') $('#cPort').value = pp || '7350';
+  const F = st.found || [];
+  $('#found').innerHTML = F.length ? F.map(r => `<button data-host="${esc(r.host)}" data-port="${r.port}" data-local="${r.local ? 1 : 0}" class="${(r.host + ':' + r.port) === c.regie ? 'cur' : ''}" title="Utiliser cette régie"><b>${esc(r.name)}${r.local ? ' (cet ordinateur)' : ''}</b><i>${esc(r.local ? 'localhost' : r.host)}:${r.port}</i></button>`).join('')
+    : "<div class=\"none\">Recherche… aucune régie détectée pour l'instant. Saisissez l'adresse à la main si besoin (pare-feu ou réseau différent).</div>";
+  const T = st.test, tr = $('#testRes');
+  tr.className = 'testres ' + (!T ? '' : T.status === 'ok' ? 'ok' : T.status === 'testing' ? 'wait' : 'bad');
+  tr.textContent = !T ? '' : T.status === 'testing' ? 'Test de ' + T.target + '…' : T.status === 'ok' ? `✓ Régie « ${T.name} » trouvée (version ${T.version})${T.regieOuverte ? ', régie ouverte' : ', fenêtre de la régie fermée'}` : '✗ ' + T.err;
   if(editing !== 'cCode') $('#cCode').value = c.code;
   if(editing !== 'cFolder') $('#cFolder').value = c.folder;
   if(editing !== 'cPrefix') $('#cPrefix').value = c.prefix || '';

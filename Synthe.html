@@ -228,6 +228,13 @@ const Mode = {
     try{ localStorage.setItem('scenepro-synthe-regie', h || 'localhost:7350'); }catch(e){}
   },
   isLocalHost(h){ return /^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/.test(h || this.host()); },
+  split(){ const m = /^(.*?)(?::(\d+))?$/.exec(this.host()); return [m[1], m[2] || '7350']; },
+  configured(){ try{ return !!localStorage.getItem('scenepro-synthe-regie'); }catch(e){ return false; } },
+  // régies qui s'annoncent sur le réseau (mode autonome) ; null = détection indisponible
+  async regies(){
+    if(!this.autonome) return null;
+    try{ const j = await (await fetch('api/regies', {cache: 'no-store'})).json(); return j.detection ? (j.regies || []) : null; }catch(e){ return null; }
+  },
 };
 const Net = {
   ws: null, ok: false, regies: 0, retryT: null,
@@ -290,39 +297,73 @@ const Access = {
   },
   ask(){ this.pending = ''; this.tried = 0; connDialog(true); },
 };
-/* réglage de la connexion : adresse de la régie + code */
+/* réglage de la connexion : régies trouvées sur le réseau, ou Adresse IP + Port + Code */
+let regiesT = null;
 function connDialog(needCode){
-  const fixed = Mode.servedByRegie(), host = Mode.host();
+  const fixed = Mode.servedByRegie(), [h0, p0] = Mode.split();
+  const st = Net.ok ? (Net.regies ? `<span style="color:var(--green)">● Connecté à la régie ${esc(Mode.host())}</span>` : `<span style="color:var(--amber)">● Serveur joint, fenêtre de la régie fermée</span>`)
+    : `<span style="color:#ff9d9d">● Hors ligne</span> — le poste fonctionne quand même : préparez vos synthés.`;
   modal(`<h3>Connexion à la régie</h3>
-    <p class="hint" style="margin-bottom:12px">${fixed ? `Ce poste est ouvert depuis la régie <b>${esc(host)}</b>.`
-      : `Le poste Synthé fonctionne <b>même si la régie est éteinte</b> : préparez vos synthés, il se connectera tout seul dès que la régie sera allumée.`}
-      Le code d'accès s'affiche dans ScènePro : menu <b>Sorties › Accès réseau (autres ordinateurs)</b>.</p>
-    ${fixed ? '' : `<div class="field"><label>Adresse de la régie</label><div style="display:flex;gap:6px">
-      <input class="txt" id="cHost" value="${esc(host.replace(/:7350$/, ''))}" placeholder="192.168.1.20">
-      <button class="btn" id="cThis" title="La régie tourne sur ce même ordinateur">Ce PC</button></div>
-      <div class="hint">Adresse IP de l'ordinateur de la régie (port 7350 par défaut).</div></div>`}
+    <p class="hint" style="margin-bottom:12px">${st}</p>
+    ${fixed ? `<p class="hint" style="margin-bottom:12px">Ce poste est ouvert depuis la régie <b>${esc(Mode.host())}</b> : l'adresse est fixe.</p>` : `
+    <div class="field"><label>Régies trouvées sur le réseau</label><div id="cList" class="info" style="padding:6px">Recherche…</div></div>
+    <div class="field" style="display:grid;grid-template-columns:1fr 110px;gap:8px">
+      <div><label>Adresse IP</label><input class="txt" id="cHost" value="${esc(h0)}" placeholder="192.168.1.20"></div>
+      <div><label>Port</label><input class="txt" id="cPort" inputmode="numeric" value="${esc(p0)}" placeholder="7350"></div>
+    </div>`}
     <div class="field"><label>Code d'accès</label>
       <input class="txt" id="cCode" inputmode="numeric" maxlength="6" placeholder="000000" style="font:700 26px var(--mono);height:50px;text-align:center;letter-spacing:8px" value="${esc(Access.stored())}">
-      <div class="hint" id="cErr" style="color:#ff9d9d">${needCode ? (Access.stored() ? 'La régie a refusé ce code.' : 'La régie demande le code d\'accès.') : ''}</div></div>
-    <div class="two"><button class="btn block" id="cOff">${Net.ok ? 'Fermer' : 'Rester hors ligne'}</button><button class="btn primary block" id="cGo">Se connecter</button></div>`);
+      <div class="hint">Affiché dans ScènePro : menu <b>Sorties › Accès réseau</b>. Pas nécessaire si la régie est sur ce même ordinateur.</div></div>
+    <div id="cRes" class="hint" style="min-height:20px;margin:-4px 0 12px;font-size:13px;color:#ff9d9d">${needCode ? (Access.stored() ? '✗ La régie a refusé ce code.' : '✗ La régie demande le code d\'accès.') : ''}</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+      <button class="btn block" id="cOff">${Net.ok ? 'Fermer' : 'Rester hors ligne'}</button>
+      ${fixed ? '<span></span>' : '<button class="btn block" id="cTest">Tester l\'adresse</button>'}
+      <button class="btn primary block" id="cGo">Connecter</button></div>`);
+  const res = (ok, msg) => { $('#cRes').style.color = ok ? 'var(--green)' : '#ff9d9d'; $('#cRes').textContent = (ok ? '✓ ' : '✗ ') + msg; };
+  const fields = () => {
+    const h = fixed ? h0 : $('#cHost').value.trim().replace(/^\w+:\/\//, '').replace(/[/:].*$/, ''), p = fixed ? p0 : ($('#cPort').value.trim() || '7350');
+    return {h, p};
+  };
   const go = () => {
-    const c = $('#cCode').value.replace(/\D/g, '');
-    if(c && c.length !== 6){ $('#cErr').textContent = 'Le code fait 6 chiffres.'; return; }
-    if(!fixed) Mode.setHost($('#cHost').value);
+    const c = $('#cCode').value.replace(/\D/g, ''), {h, p} = fields();
+    if(c && c.length !== 6){ res(false, 'Le code fait 6 chiffres.'); return; }
+    if(!fixed){ if(!h){ res(false, 'Indiquez l\'adresse IP de la régie.'); return; } if(!(+p > 0 && +p < 65536)){ res(false, 'Port invalide (7350 par défaut).'); return; } Mode.setHost(h + ':' + p); }
     if(c) Access.save(c);
     Access.pending = ''; Access.tried = 0;
     closeModal(); showUrls(); Net.connect();
   };
+  const test = async () => {
+    const {h, p} = fields(); if(!h){ res(false, 'Indiquez l\'adresse IP de la régie.'); return; }
+    $('#cRes').style.color = 'var(--muted)'; $('#cRes').textContent = 'Test de ' + h + ':' + p + '…';
+    try{
+      const j = await (await fetch(`api/test?host=${encodeURIComponent(h)}&port=${encodeURIComponent(p)}`, {cache: 'no-store'})).json();
+      if(!j.ok) return res(false, j.msg);
+      res(true, `Régie « ${j.name} » trouvée (ScènePro ${j.version || ''})` + (j.regieOuverte ? '' : ' — fenêtre de la régie fermée pour l\'instant')
+        + (!Mode.isLocalHost(h) && j.lan === false ? ' — mais l\'accès réseau y est désactivé.' : '. Cliquez sur Connecter.'));
+    }catch(e){ res(false, 'Test impossible.'); }
+  };
   $('#cGo').onclick = go; $('#cCode').onkeydown = e => { if(e.key === 'Enter') go(); };
   $('#cOff').onclick = closeModal;
-  if($('#cThis')) $('#cThis').onclick = () => { $('#cHost').value = 'localhost'; };
-  (needCode ? $('#cCode') : ($('#cHost') || $('#cCode'))).focus();
+  if($('#cTest')) $('#cTest').onclick = test;
+  // liste des régies qui s'annoncent sur le réseau (mise à jour toutes les 2 s tant que la fenêtre est ouverte)
+  const list = async () => {
+    const box = $('#cList'); if(!box || !$('#modal').classList.contains('on')){ clearInterval(regiesT); return; }
+    const rs = await Mode.regies();
+    box.innerHTML = rs == null ? '<span style="color:var(--dim)">Détection automatique indisponible : saisissez l\'adresse ci-dessous.</span>'
+      : rs.length ? rs.map((r, i) => `<button class="btn block" data-r="${i}" style="justify-content:space-between;margin:2px 0;height:36px">
+          <span><b>${esc(r.name)}</b> ${r.local ? '<span style="color:var(--green)">· ce PC</span>' : ''}</span><span style="font-family:var(--mono);color:var(--muted)">${esc(r.host)}:${r.port}</span></button>`).join('')
+      : '<span style="color:var(--dim)">Aucune régie annoncée pour l\'instant (régie éteinte, autre réseau ou pare-feu). Vous pouvez saisir l\'adresse.</span>';
+    box.querySelectorAll('[data-r]').forEach(b => b.onclick = () => { const r = rs[+b.dataset.r]; $('#cHost').value = r.host; $('#cPort').value = r.port; if(r.local || $('#cCode').value) go(); else { res(true, `Régie « ${r.name} » choisie : tapez son code d'accès puis Connecter.`); $('#cCode').focus(); } });
+  };
+  clearInterval(regiesT);
+  if(!fixed){ list(); regiesT = setInterval(list, 2000); }
+  (needCode ? $('#cCode') : (fixed ? $('#cCode') : $('#cHost'))).focus();
 }
 $('#conn').onclick = () => connDialog(false);
 function setConn(ok, txt){
   const c = $('#conn'), host = Mode.host().replace(/:7350$/, '');
   c.className = 'pill ' + (ok ? 'ok' : 'bad');
-  $('#connLbl').textContent = txt || (ok ? (Net.regies ? 'RÉGIE CONNECTÉE · ' + host : 'SERVEUR OK — RÉGIE FERMÉE')
+  $('#connLbl').textContent = txt || (ok ? (Net.regies ? 'RÉGIE CONNECTÉE · ' + host : 'CONNECTÉ · FENÊTRE RÉGIE FERMÉE · ' + host)
     : 'HORS LIGNE — PRÉPARATION · ' + host);
   if(ok && !Net.regies){ c.className = 'pill'; c.querySelector('.led').style.background = 'var(--amber)'; } else c.querySelector('.led').style.background = '';
 }
@@ -597,6 +638,17 @@ document.addEventListener('keydown', e => {
   showUrls(); renderAll(); pgmScene.update(Net.payload());
   requestAnimationFrame(frame);
   Net.connect();
+  // première utilisation (aucune adresse réglée) : on se branche sur la première régie qui s'annonce (celle de ce PC en priorité)
+  if(Mode.autonome && !Mode.configured()){
+    const auto = setInterval(async () => {
+      if(Net.ok || Mode.configured()){ clearInterval(auto); return; }
+      const rs = await Mode.regies(); if(!rs || !rs.length) return;
+      const r = rs.find(x => x.local) || rs[0];
+      clearInterval(auto); Mode.setHost(r.host + ':' + r.port); showUrls();
+      toast(`Régie « ${r.name} » détectée (${r.host}:${r.port}) : connexion…`);
+      Net.connect();
+    }, 2000);
+  }
 })();
 </script>
 </body>

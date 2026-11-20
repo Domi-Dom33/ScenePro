@@ -1,7 +1,7 @@
 {
   "name": "scenepro",
   "productName": "ScènePro",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Régie vidéo pour conférences et événements : 3 programmes, sorties HDMI, diffusion en ligne, mixage audio.",
   "main": "main.js",
   "author": "ScènePro",
@@ -45,6 +45,8 @@
       "busfeed.js",
       "recorder.js",
       "enregistreur.html",
+      "discovery.js",
+      "conducteur.html",
       "package.json",
       "build/icon.png",
       "build/icons/*.png",

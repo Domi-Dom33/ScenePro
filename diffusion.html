@@ -139,7 +139,20 @@ select.txt{padding:0 6px}
 .logbox{height:100%;min-height:120px;overflow:auto;background:#0b0c0e;border:1px solid var(--line);border-radius:7px;padding:8px 10px;font-family:var(--mono);font-size:11px;color:#9aa3ae;white-space:pre-wrap;user-select:text}
 .warn{padding:9px 12px;border-radius:7px;background:rgba(255,176,32,.1);border:1px solid rgba(255,176,32,.35);color:#ffd27a;font-size:12.5px;margin-bottom:10px}
 .err{padding:9px 12px;border-radius:7px;background:var(--red-bg);border:1px solid rgba(255,45,45,.45);color:#ffb3b3;font-size:12.5px;margin-bottom:10px}
-.conn{display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:10px;align-items:end;max-width:900px}
+.conn{display:grid;grid-template-columns:2fr 1fr 1fr;gap:10px;align-items:end}
+.linkgrid{display:grid;grid-template-columns:minmax(260px,1fr) minmax(0,1.6fr);gap:18px;max-width:1200px}
+.regies{display:flex;flex-direction:column;gap:6px;max-height:150px;overflow:auto}
+.regie{display:flex;flex-direction:column;align-items:flex-start;text-align:left;gap:1px;padding:7px 10px;border-radius:7px;border:1px solid var(--line2);background:var(--panel2);position:relative}
+.regie:hover{border-color:#56606b}
+.regie small{color:var(--muted);font-size:11.5px}
+.regie.on{border-color:var(--green);background:var(--green-bg)}
+.regie span{position:absolute;right:9px;top:50%;transform:translateY(-50%);font-size:10px;font-weight:800;letter-spacing:1px;color:var(--green)}
+.lres{margin-top:10px;font-size:12.5px;min-height:18px;color:var(--muted)}
+.lres.ok{color:var(--green)}.lres.bad{color:#ff8a8a}
+.lstate{margin-top:8px;padding:8px 11px;border-radius:7px;background:var(--panel2);border:1px solid var(--line);font-size:12.5px;font-weight:600}
+.lstate.ok{border-color:rgba(41,209,107,.5);color:var(--green)}
+.lstate.wait{border-color:rgba(255,176,32,.5);color:var(--amber)}
+.lstate.bad{border-color:rgba(255,45,45,.5);color:#ff8a8a}
 .files{margin-top:8px;font-family:var(--mono);font-size:11.5px;color:var(--muted);user-select:text}
 #toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(20px);background:#262b32;border:1px solid var(--line2);padding:10px 16px;border-radius:8px;opacity:0;transition:.2s;z-index:100;pointer-events:none;box-shadow:0 10px 30px rgba(0,0,0,.5)}
 #toast.on{opacity:1;transform:translateX(-50%)}
@@ -266,6 +279,7 @@ function connect(){
     }
     let m; try{ m = JSON.parse(e.data); }catch(err){ return; }
     if(m.type === 'state'){ const first = !S; S = m; if(first || !cfg){ cfg = JSON.parse(JSON.stringify(m.cfg)); renderTab(); } render(); }
+    else if(m.type === 'testResult'){ const el = $('#lTestRes'); if(el){ el.className = 'lres ' + (m.ok ? 'ok' : 'bad'); el.textContent = (m.ok ? '✓ ' : '✗ ') + m.msg; } }
     else if(m.type === 'logs'){ logs = m.lines || []; renderLog(); }
     else if(m.type === 'log'){ logs.push(m.line); if(logs.length > 300) logs.shift(); renderLog(); }
   };
@@ -339,6 +353,7 @@ function render(){
 
   document.title = (rc.status === 'rec' ? '● REC ' + recT + ' — ' : '') + (airLive ? 'ON AIR ' + airT + ' — ' : '') + 'ScènePro Diffusion';
   if(tab === 'rec') renderRecFiles();
+  if(tab === 'link') renderLinkLive();
 }
 const baseName = p => String(p || '').split(/[\\/]/).pop();
 const activeDests = () => (cfg ? cfg.dests : S.cfg.dests).filter(d => d.enabled && (d.server || d.key));
@@ -445,18 +460,71 @@ function renderRecFiles(){
 }
 function renderLink(box){
   const r = cfg.regie;
-  box.innerHTML = `<div class="conn">
-    <div><label class="flabel">Adresse de l'ordinateur régie</label><input class="txt" id="lHost" value="${esc(r.host)}" placeholder="ex. 192.168.1.20" spellcheck="false"></div>
-    <div><label class="flabel">Port</label><input class="txt" id="lPort" value="${esc(r.port)}" inputmode="numeric"></div>
-    <div><label class="flabel">Code d'accès (6 chiffres)</label><input class="txt" id="lCode" value="${esc(r.code)}" inputmode="numeric" maxlength="6" placeholder="••••••"></div>
-    <div style="display:flex;gap:6px"><button class="btn primary" id="lSave">Se connecter</button><button class="btn" id="lLocal" title="La régie tourne sur ce même ordinateur">Cet ordinateur</button></div>
-  </div>
-  <p class="hint">L'adresse et le code s'affichent dans la régie, menu <b>Aide › Accès réseau</b> (les mêmes que pour le poste Synthé). Les deux ordinateurs doivent être sur le même réseau ; un câble Ethernet est conseillé. La régie envoie le programme du bus <b>WEB</b> (image + son du master WEB) ; tout l'encodage et l'envoi vers Internet se font ici.</p>
-  <div id="lState" class="hint"></div>`;
-  const apply = () => { cfg.regie = {host: $('#lHost').value.trim(), port: +$('#lPort').value || 7350, code: $('#lCode').value.replace(/\D/g, '').slice(0, 6)}; saveCfg(true); toast('Connexion à la régie…'); };
+  box.innerHTML = `<div class="linkgrid">
+    <div>
+      <label class="flabel">Régies trouvées sur le réseau</label>
+      <div class="regies" id="lFound"></div>
+      <p class="hint">La liste se met à jour toute seule. Un clic remplit les champs et connecte.</p>
+    </div>
+    <div>
+      <div class="conn">
+        <div><label class="flabel">Adresse IP de la régie</label><input class="txt" id="lHost" value="${esc(r.host)}" placeholder="ex. 192.168.1.20" spellcheck="false"></div>
+        <div><label class="flabel">Port</label><input class="txt" id="lPort" value="${esc(r.port)}" inputmode="numeric"></div>
+        <div><label class="flabel">Code d'accès</label><input class="txt" id="lCode" value="${esc(r.code)}" inputmode="numeric" maxlength="6" placeholder="6 chiffres"></div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+        <button class="btn" id="lTest">Tester l'adresse</button>
+        <button class="btn primary" id="lSave">Connecter</button>
+        <button class="btn" id="lLocal" title="La régie tourne sur ce même ordinateur (aucun code)">Régie sur cet ordinateur</button>
+        <button class="btn" id="lOff" title="Ne plus se connecter (préparer la diffusion seul)">Déconnecter</button>
+      </div>
+      <div class="lres" id="lTestRes"></div>
+      <div class="lstate" id="lState"></div>
+      <p class="hint">Le code (6 chiffres) et l'adresse s'affichent dans la régie, menu <b>Aide › Accès réseau</b>. Il n'est pas demandé quand la régie est sur cet ordinateur. Les deux ordinateurs doivent être sur le même réseau (câble Ethernet conseillé).</p>
+    </div>
+  </div>`;
+  const read = () => ({host: $('#lHost').value.trim(), port: +$('#lPort').value || 7350, code: $('#lCode').value.replace(/\D/g, '').slice(0, 6)});
+  const apply = () => { cfg.regie = read(); saveCfg(true); $('#lTestRes').textContent = ''; toast(cfg.regie.host ? 'Connexion à la régie…' : 'Liaison désactivée.'); };
   $('#lSave').onclick = apply;
-  $('#lLocal').onclick = () => { $('#lHost').value = '127.0.0.1'; $('#lCode').value = ''; apply(); };
+  $('#lTest').onclick = () => { const v = read(); const el = $('#lTestRes'); el.className = 'lres'; el.textContent = 'Test en cours…'; send({type: 'test', host: v.host, port: v.port}); };
+  $('#lLocal').onclick = () => { $('#lHost').value = '127.0.0.1'; $('#lCode').value = ''; const loc = (S && S.regies || []).find(x => x.local); if(loc) $('#lPort').value = loc.port; apply(); };
+  $('#lOff').onclick = () => { $('#lHost').value = ''; apply(); };
   box.querySelectorAll('input').forEach(i => i.addEventListener('keydown', e => { if(e.key === 'Enter') apply(); }));
+  $('#lFound').onclick = e => {
+    const b = e.target.closest('[data-host]'); if(!b) return;
+    $('#lHost').value = b.dataset.host; $('#lPort').value = b.dataset.port;
+    if(b.dataset.local === '1') $('#lCode').value = '';
+    if(b.dataset.local !== '1' && !$('#lCode').value){ $('#lCode').focus(); $('#lTestRes').className = 'lres'; $('#lTestRes').textContent = 'Saisissez le code d\'accès affiché par la régie, puis « Connecter ».'; return; }
+    apply();
+  };
+  foundSig = '';
+  renderLinkLive();
+}
+let foundSig = '';
+// parties de l'onglet « Liaison régie » mises à jour en continu (sans toucher aux champs en cours de saisie)
+function renderLinkLive(){
+  const lf = $('#lFound'); if(!lf || !S) return;
+  const list = S.regies || [], cur = S.cfg.regie;
+  const sig = JSON.stringify(list) + cur.host + cur.port;
+  if(sig !== foundSig){
+    foundSig = sig;
+    lf.innerHTML = list.length ? list.map(r => { const on = (r.host === cur.host || (r.local && /^(127\.0\.0\.1|localhost)$/.test(cur.host))) && +r.port === +cur.port; return `
+      <button class="regie ${on ? 'on' : ''}" data-host="${esc(r.host)}" data-port="${esc(r.port)}" data-local="${r.local ? 1 : 0}">
+        <b>${esc(r.name)}</b><small>${r.local ? 'cet ordinateur' : esc(r.host)} · port ${esc(r.port)}${r.version ? ' · v' + esc(r.version) : ''}</small>${on ? '<span>CONNECTÉE</span>' : ''}</button>`; }).join('')
+      : '<div class="hint" style="margin:0">Aucune régie détectée pour l\'instant. Vérifiez que ScènePro (régie) est lancé et sur le même réseau, ou saisissez l\'adresse à droite.</div>';
+  }
+  const f = S.feed, el = $('#lState');
+  const where = cur.host ? (/^(127\.0\.0\.1|localhost)$/.test(cur.host) ? 'cet ordinateur' : cur.host) + ':' + cur.port : '';
+  const st = {
+    off: ['', 'Non connecté : choisissez une régie ou saisissez son adresse. Vous pouvez préparer la diffusion sans régie.'],
+    connecting: ['wait', `Connexion à ${where}…`],
+    auth: ['bad', `✗ ${f.err || 'Code refusé'} (${where}). Vérifiez le code à 6 chiffres.`],
+    noregie: ['wait', `Serveur ${where} joint, mais la fenêtre régie est fermée : en attente.`],
+    waiting: ['ok', `✓ Connecté à ${where} — en attente du programme…`],
+    live: ['ok', `✓ Connecté à ${where} — programme reçu (${nf(f.kbps)} kb/s)`],
+    error: ['bad', `✗ ${f.err || 'Régie injoignable'} (${where}) — nouvelle tentative automatique…`],
+  }[f.status] || ['', f.status];
+  el.className = 'lstate ' + st[0]; el.textContent = st[1];
 }
 function renderLog(){
   const lg = $('#log'); if(!lg) return;

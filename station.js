@@ -171,7 +171,7 @@ function startStation(opts = {}) {
   /* ----- configuration (clés de stream : uniquement sur cet ordinateur) ----- */
   const cfgFile = path.join(confDir, 'diffusion.json');
   const cfg = {
-    regie: { host: '127.0.0.1', port: 7350, code: '' },
+    regie: { host: '', port: 7350, code: '' },   // vide au premier lancement : détection automatique
     res: '720', fps: 30, kbps: 4500, akbps: 160, preset: 'veryfast', rkbps: 12000,
     recDir: opts.recDir || path.join(os.homedir(), 'Videos', 'ScenePro'),
     dests: [],
@@ -194,13 +194,52 @@ function startStation(opts = {}) {
     ws: null, retryT: null, info: null, header: null, headerDone: false, headerParts: [], lastData: 0, bytes: 0,
     kbpsIn: 0, prevBytes: 0, prevT: 0, regie: {}, err: '', gen: 0,
   };
+  // 'localhost' → 127.0.0.1 : le serveur de la régie écoute en IPv4
+  const hostOf = h => { h = String(h || '').trim(); return /^localhost$/i.test(h) ? '127.0.0.1' : h; };
+  const errCode = e => (e && (e.code || (e.errors && e.errors[0] && e.errors[0].code))) || '';
+  function errText(e) {
+    const c = errCode(e);
+    if (c === 'ECONNREFUSED') return 'Ordinateur joignable, mais pas de régie ScènePro sur ce port';
+    if (c === 'ETIMEDOUT' || c === 'TIMEOUT' || /timed out|timeout/i.test(e && e.message)) return 'Pas de réponse : mauvaise adresse IP, ordinateur éteint ou pare-feu';
+    if (c === 'EHOSTUNREACH' || c === 'ENETUNREACH') return 'Adresse injoignable depuis ce réseau';
+    if (c === 'ENOTFOUND' || c === 'EAI_AGAIN') return 'Adresse inconnue';
+    return (e && e.message) || 'Régie injoignable';
+  }
+  // test d'une adresse sans code : GET /api/hello de la régie
+  function testRegie(host, port) {
+    return new Promise(resolve => {
+      host = hostOf(host); port = clampInt(port, 1, 65535, 7350);
+      if (!host) return resolve({ ok: false, msg: 'Indiquez l\'adresse IP de l\'ordinateur régie.' });
+      const req = http.get({ host, port, path: '/api/hello', timeout: 3500 }, res => {
+        let b = ''; res.on('data', d => { b += d; if (b.length > 1e5) req.destroy(); });
+        res.on('end', () => {
+          let j = null; try { j = JSON.parse(b); } catch (e) {}
+          if (!j || j.app !== 'ScenePro') return resolve({ ok: false, msg: 'Ce port ne répond pas comme une régie ScènePro (mauvais port ?)' });
+          resolve({ ok: true, name: j.name, version: j.version, regieOuverte: j.regieOuverte, local: host === '127.0.0.1',
+            msg: `Régie « ${j.name || host} » trouvée` + (j.regieOuverte === false ? ' (serveur prêt, fenêtre régie fermée)' : '') + (j.version ? ` — version ${j.version}` : '') });
+        });
+      });
+      req.on('timeout', () => { req.destroy(Object.assign(new Error('timeout'), { code: 'TIMEOUT' })); });
+      req.on('error', e => resolve({ ok: false, msg: errText(e) }));
+    });
+  }
+  // détection automatique des régies qui s'annoncent sur le réseau (UDP 7399)
+  let regies = [], disc = null;
+  try {
+    disc = require('./discovery').listen(list => {
+      regies = list.map(r => ({ name: r.name, host: r.local ? '127.0.0.1' : r.host, port: r.port, local: !!r.local, version: r.version }));
+      // premier lancement sans adresse : on se branche tout seul sur une régie de ce même ordinateur
+      if (!cfg.regie.host) { const loc = regies.find(r => r.local); if (loc) { cfg.regie = { host: '127.0.0.1', port: loc.port, code: '' }; saveCfg(); addLog(`Régie détectée sur cet ordinateur (port ${loc.port}) : connexion.`); feedConnect(); } }
+    });
+  } catch (e) { addLog('Détection automatique indisponible : ' + e.message); }
+
   function feedConnect() {
     clearTimeout(feed.retryT); feed.retryT = null;
     if (feed.ws) { const w = feed.ws; feed.ws = null; try { w.terminate(); } catch (e) {} }
     const r = cfg.regie;
-    if (!r.host) { feed.status = 'off'; return; }
+    if (!r.host) { feed.status = 'off'; feed.err = ''; return; }
     feed.status = 'connecting'; feed.err = '';
-    const url = `ws://${r.host.trim()}:${clampInt(r.port, 1, 65535, 7350)}/feed?role=diffusion&k=${encodeURIComponent(r.code || '')}`;
+    const url = `ws://${hostOf(r.host)}:${clampInt(r.port, 1, 65535, 7350)}/feed?role=diffusion&k=${encodeURIComponent(r.code || '')}`;
     let ws;
     try { ws = new WebSocket(url, { handshakeTimeout: 5000, headers: { 'User-Agent': 'ScenePro-Diffusion/' + VERSION } }); }
     catch (e) { feed.status = 'error'; feed.err = e.message; feedRetry(); return; }
@@ -220,11 +259,11 @@ function startStation(opts = {}) {
       feed.ws = null;
       if (code === 4401) { feed.status = 'auth'; feed.err = 'Code d\'accès refusé'; addLog('Code d\'accès refusé par la régie : vérifiez le code à 6 chiffres.'); }
       else if (code === 4403) { feed.status = 'auth'; feed.err = 'Accès réseau bloqué'; addLog('La régie refuse la connexion (accès réseau désactivé ou trop d\'essais).'); }
-      else { feed.status = 'error'; feed.err = 'Régie injoignable'; }
+      else { feed.status = 'error'; if (!feed.err) feed.err = 'Liaison avec la régie coupée'; }
       feedLost('liaison réseau coupée');
       feedRetry();
     });
-    ws.on('error', e => { if (feed.ws === ws) feed.err = e.code === 'ECONNREFUSED' ? 'Régie injoignable (ScènePro est-il lancé ?)' : e.message; });
+    ws.on('error', e => { if (feed.ws === ws) feed.err = errText(e); });
   }
   function feedRetry() { clearTimeout(feed.retryT); feed.retryT = setTimeout(feedConnect, feed.status === 'auth' ? 15000 : 3000); }
   function sendFeed(o) { if (feed.ws && feed.ws.readyState === 1) feed.ws.send(JSON.stringify(o)); }
@@ -416,6 +455,7 @@ function startStation(opts = {}) {
       stream: { status: stream.status, want: stream.want, startedAt: stream.startedAt, retry: stream.retry, err: stream.err, dests: stream.dests, kbps: Math.round(stream.kbps), stats: stream.stats, hist: stream.hist, health: health() },
       rec: { status: rec.status, want: rec.want, startedAt: rec.startedAt, file: rec.file, files: rec.files, err: rec.err, size: rec.stats ? rec.stats.totalSize : 0, stats: rec.stats },
       levels: preview.levels,
+      regies,
       cfg,
       free: diskFree(),
     };
@@ -499,6 +539,7 @@ function startStation(opts = {}) {
       else if (m.type === 'rec') m.on ? startRec() : stopRec();
       else if (m.type === 'route') sendFeed({ type: 'route', bus: clampInt(m.bus, 1, 3, 1) });
       else if (m.type === 'reconnect') feedConnect();
+      else if (m.type === 'test') testRegie(m.host, m.port).then(r => { if (ws.readyState === 1) ws.send(JSON.stringify(Object.assign({ type: 'testResult' }, r))); });
       else if (m.type === 'openRec') openDir(cfg.recDir);
     });
     ws.on('close', () => { uiClients.delete(ws); });
@@ -524,6 +565,7 @@ function startStation(opts = {}) {
           busy: () => stream.want || rec.want,
           close() {
             clearInterval(tick); clearTimeout(feed.retryT); clearTimeout(stream.retryT);
+            if (disc) disc.close();
             stream.want = rec.want = false;
             [stream.proc, rec.proc].forEach(p => { if (p) p.stop(); });
             stopPreview();
