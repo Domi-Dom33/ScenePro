@@ -99,6 +99,7 @@ label.f{display:block;font-size:10.5px;letter-spacing:1.1px;font-weight:700;colo
   <div class="brand"><img src="/logo.png" alt="" width="26" height="26">ScènePro <small>Enregistrement</small></div>
   <div class="sp"></div>
   <div class="pill" id="pLink"><i class="led"></i><span id="lLink">RÉGIE : HORS LIGNE</span></div>
+  <div class="pill" id="pCpu" title="Processeur : utilisation par ce poste / par tout l'ordinateur"><span id="lCpu">CPU —</span></div>
   <div class="pill" id="pDisk"><span id="lDisk">DISQUE —</span></div>
   <div class="clock" id="clock">00:00:00</div>
 </header>
@@ -247,6 +248,7 @@ function render(){
   const armed = SOURCES.filter(k => c.armed[k]).map(k => NAMES[k]);
   const remain = totalKbps > 0 ? free * 8 / 1000 / totalKbps * 1000 : 0;
   $('#summary').innerHTML = `REC global : <b>${armed.join(' + ') || 'aucun bus coché'}</b>` + (recN ? ` · <b>${recN}</b> en cours` : '') + (remain ? ` · autonomie disque <b>${hms(remain)}</b>` : '');
+  if(st.cpu){ $('#lCpu').textContent = `CPU ${st.cpu.app}% · PC ${st.cpu.pc}%`; $('#pCpu').className = 'pill ' + (st.cpu.pc >= 90 ? 'bad' : st.cpu.pc >= 75 ? 'wait' : ''); }
   $('#lDisk').textContent = free ? `DISQUE ${(free / 1e9).toFixed(0)} Go LIBRES` : 'DISQUE ?';
   $('#pDisk').className = 'pill ' + (free && free < 20e9 ? 'bad' : '');
   $('#recent').innerHTML = st.recent.length ? st.recent.map(r => `<div data-name="${esc(r.name)}" title="Ouvrir"><span>${esc(r.name)}</span><i>${mo(r.size)}</i></div>`).join('')

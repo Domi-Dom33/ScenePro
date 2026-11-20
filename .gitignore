@@ -3,3 +3,4 @@ dist/
 *.log
 ffmpeg.exe
 .claude/
+docs/demo-enr/

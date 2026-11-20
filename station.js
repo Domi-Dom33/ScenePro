@@ -271,6 +271,7 @@ function startStation(opts = {}) {
 
   function onFeedInit(m) {
     feed.info = m; feed.header = null; feed.headerDone = false; feed.headerParts = []; feed.gen++;
+    feed.initAt = Date.now(); feed.bytesInit = 0;
     feed.status = 'waiting';
     addLog(`Programme reçu de la régie : ${m.w}×${m.h} ${m.fps} i/s (${m.mime || 'webm'}).`);
     // nouvel en-tête = nouvelle chronologie : les encodeurs en cours redémarrent
@@ -278,7 +279,7 @@ function startStation(opts = {}) {
     stopPreview();
   }
   function onFeedData(chunk) {
-    feed.lastData = Date.now(); feed.bytes += chunk.length;
+    feed.lastData = Date.now(); feed.bytes += chunk.length; feed.bytesInit = (feed.bytesInit || 0) + chunk.length;
     if (!feed.headerDone) {
       feed.headerParts.push(chunk);
       const all = Buffer.concat(feed.headerParts);
@@ -303,6 +304,15 @@ function startStation(opts = {}) {
 
   /* ----- aperçu (vignette + vumètres) ----- */
   const preview = { proc: null, levels: [-90, -90], lastFrame: 0 };
+  // utilisation du processeur : ce logiciel (interface + chaque ffmpeg) et l'ordinateur entier
+  let cpu = null;
+  try {
+    cpu = require('./cpu-usage').monitor({
+      appMetrics: opts.appMetrics,
+      children: () => [[stream.proc, 'diffusion'], [rec.proc, 'rec'], [preview.proc, 'apercu']]
+        .filter(([p]) => p && p.proc && p.proc.pid).map(([p, role]) => ({ pid: p.proc.pid, role })),
+    });
+  } catch (e) {}
   function startPreview() {
     if (preview.proc || !ffmpegOk || !uiClients.size) return;
     let jbuf = Buffer.alloc(0);
@@ -451,13 +461,15 @@ function startStation(opts = {}) {
     if (feed.status === 'live' && now - feed.lastData > 4000) feed.kbpsIn = 0;
     return {
       type: 'state', now, version: VERSION, ffmpeg: ffmpegOk, ffmpegVersion,
-      feed: { status: feed.status, err: feed.err, info: feed.info, kbps: Math.round(feed.kbpsIn), stalled: feed.status === 'live' && now - feed.lastData > 3000, regie: feed.regie },
+      feed: { status: feed.status, err: feed.err, info: feed.info, kbps: Math.round(feed.kbpsIn), stalled: feed.status === 'live' && now - feed.lastData > 3000, regie: feed.regie,
+        bytesInit: feed.bytesInit || 0, resyncs: !!feed.resyncAt && feed.status === 'waiting' },
       stream: { status: stream.status, want: stream.want, startedAt: stream.startedAt, retry: stream.retry, err: stream.err, dests: stream.dests, kbps: Math.round(stream.kbps), stats: stream.stats, hist: stream.hist, health: health() },
       rec: { status: rec.status, want: rec.want, startedAt: rec.startedAt, file: rec.file, files: rec.files, err: rec.err, size: rec.stats ? rec.stats.totalSize : 0, stats: rec.stats },
       levels: preview.levels,
       regies,
       cfg,
       free: diskFree(),
+      cpu: cpu ? cpu.read() : null,
     };
   }
   let freeCache = { t: 0, v: null };
@@ -473,6 +485,13 @@ function startStation(opts = {}) {
   const tick = setInterval(() => {
     tickN++;
     if (feed.status === 'live' && feed.lastData && Date.now() - feed.lastData > 6000) feedLost('plus de données depuis 6 s');
+    // connecté et en-tête annoncé, mais pas d'image exploitable : on redemande le flux à la régie
+    if (feed.status === 'waiting' && feed.initAt && Date.now() - feed.initAt > 5000 && Date.now() - (feed.resyncAt || 0) > 6000) {
+      feed.resyncAt = Date.now();
+      addLog(feed.bytesInit ? `Flux reçu de la régie (${feed.bytesInit} octets) mais illisible : nouvelle demande.` : 'La régie n\'envoie aucune image : nouvelle demande du programme.');
+      feed.initAt = Date.now();
+      sendFeed({ type: 'resync' });
+    }
     if (uiClients.size) broadcast(snapshot()); else if (preview.proc) stopPreview();
     // retour d'état pour la régie (le serveur le relaie aux clients /control en {type:'stream', …})
     // les durées sont envoyées en millisecondes (les horloges des deux ordinateurs peuvent différer)
@@ -569,6 +588,7 @@ function startStation(opts = {}) {
             stream.want = rec.want = false;
             [stream.proc, rec.proc].forEach(p => { if (p) p.stop(); });
             stopPreview();
+            if (cpu) cpu.close();
             if (feed.ws) try { feed.ws.terminate(); } catch (e) {}
             wssUi.clients.forEach(c => c.terminate());
             return new Promise(r => setTimeout(() => server.close(() => r()), 600));
@@ -595,7 +615,7 @@ function runElectron() {
   app.on('second-instance', () => { if (win) { if (win.isMinimized()) win.restore(); win.focus(); } });
   app.whenReady().then(async () => {
     try {
-      st = await startStation({ port: 7360, root: __dirname, confDir: app.getPath('userData'), recDir: path.join(app.getPath('videos'), 'ScenePro'), openPath: d => shell.openPath(d) });
+      st = await startStation({ port: 7360, root: __dirname, confDir: app.getPath('userData'), recDir: path.join(app.getPath('videos'), 'ScenePro'), openPath: d => shell.openPath(d), appMetrics: () => app.getAppMetrics() });
     } catch (e) { dialog.showErrorBox('ScènePro Diffusion', 'Impossible de démarrer le poste Diffusion : ' + e.message); app.quit(); return; }
     Menu.setApplicationMenu(null);
     win = new BrowserWindow({ width: 1400, height: 900, minWidth: 980, minHeight: 640, backgroundColor: '#141619', title: 'ScènePro Diffusion', icon: ICON, show: false,

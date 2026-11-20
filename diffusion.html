@@ -100,6 +100,22 @@ main{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(380px,1fr);gap:1
 .st b{display:block;font-family:var(--mono);font-size:16px;margin-top:3px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .st b.g{color:var(--green)}.st b.w{color:var(--amber)}.st b.r{color:var(--red)}
 .st.span2{grid-column:span 2}
+.st.span4{grid-column:1 / -1}
+.cpuchip{gap:6px}
+.cpuchip .dimkb{color:var(--muted)}
+.cpubar{display:flex;width:46px;height:6px;border-radius:3px;background:#0b0c0e;overflow:hidden;font-style:normal}
+.cpubar b{display:block;height:100%;width:0}
+#cpuBarApp,#sCpuBarApp{background:var(--blue)}
+#cpuBarOther,#sCpuBarOther{background:#4a525c}
+.cpuchip.hot #cpuBarApp{background:var(--amber)}.cpuchip.crit #cpuBarApp{background:var(--red)}
+.cpurow{display:flex;align-items:center;gap:10px;margin-top:4px}
+.cpurow b{margin:0;font-size:16px;min-width:64px}
+.cpurow b.dimb{color:var(--muted);text-align:right}
+.cpumeter{flex:1;display:flex;height:10px;border-radius:5px;background:#0b0c0e;border:1px solid var(--line);overflow:hidden}
+.cpumeter i{display:block;height:100%;width:0;transition:width .4s}
+.cpust.hot #sCpuBarApp{background:var(--amber)}.cpust.crit #sCpuBarApp{background:var(--red)}
+.cpuparts{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:6px;font-size:11.5px;color:var(--muted)}
+.cpuparts span b{display:inline;font-family:var(--mono);font-size:11.5px;color:var(--text);font-weight:600}
 .st canvas{display:block;width:100%;height:34px;margin-top:4px}
 
 /* onglets du bas */
@@ -170,6 +186,7 @@ select.txt{padding:0 6px}
       <div class="tally" id="tAir">ON AIR <b id="tAirTc">00h00m00s</b></div>
       <div class="tally" id="tRec"><i class="dot"></i>REC <b id="tRecTc">00h00m00s</b></div>
     </div>
+    <div class="chip cpuchip" id="cpuChip" title="Processeur : ce logiciel / l'ordinateur entier"><span>CPU</span><span class="kb" id="cpuApp">—</span><i class="cpubar"><b id="cpuBarApp"></b><b id="cpuBarOther"></b></i><span class="kb dimkb" id="cpuPc">PC —</span></div>
     <div class="clock" id="clock">00:00:00</div>
   </header>
 
@@ -218,6 +235,9 @@ select.txt{padding:0 6px}
           <div class="st"><small>Images / s</small><b id="sFps">—</b></div>
           <div class="st"><small>Données envoyées</small><b id="sData">—</b></div>
           <div class="st"><small>Fichier REC</small><b id="sRecSize">—</b></div>
+          <div class="st span4 cpust"><small>Processeur (CPU) — ce logiciel / ordinateur entier</small>
+            <div class="cpurow"><b id="sCpuApp">—</b><div class="cpumeter"><i id="sCpuBarApp"></i><i id="sCpuBarOther"></i></div><b id="sCpuPc" class="dimb">—</b></div>
+            <div class="cpuparts" id="sCpuParts"></div></div>
         </div>
       </div>
     </section>
@@ -307,7 +327,8 @@ function render(){
   const sig = f.status === 'live' && now - lastFrame < 3000;
   $('#nosig').style.display = sig ? 'none' : '';
   $('#nosigSub').textContent = f.status === 'off' ? 'Réglez l\'adresse de la régie dans l\'onglet « Liaison régie ».' : f.status === 'auth' ? 'Code d\'accès refusé : vérifiez-le dans « Liaison régie ».'
-    : f.status === 'noregie' ? 'Le serveur répond mais la régie ScènePro est fermée.' : f.status === 'error' ? (f.err || 'Régie injoignable') + ' — nouvelle tentative…' : f.status === 'live' ? 'Signal reçu, ouverture de l\'aperçu…' : 'En attente du programme…';
+    : f.status === 'noregie' ? 'Le serveur répond mais la régie ScènePro est fermée.' : f.status === 'error' ? (f.err || 'Régie injoignable') + ' — nouvelle tentative…' : f.status === 'live' ? 'Signal reçu, ouverture de l\'aperçu…'
+    : f.status === 'waiting' && f.resyncs ? (f.bytesInit ? 'Flux reçu mais illisible : nouvelle demande à la régie…' : 'Régie connectée mais aucune image reçue : nouvelle demande à la régie…') : 'En attente du programme…';
   $('#fmtChip').textContent = f.info ? `${f.info.w}×${f.info.h} · ${f.info.fps} i/s` : '—';
   const reg = f.regie || {}, route = reg.routage && reg.routage.web ? +String(reg.routage.web).replace(/\D/g, '') : 0;
   document.querySelectorAll('[data-bus]').forEach(b => { b.classList.toggle('on', +b.dataset.bus === route); b.disabled = !(f.status === 'live' || f.status === 'waiting'); });
@@ -349,6 +370,7 @@ function render(){
     set('sFps', s.fps ? s.fps.toFixed(1) : '—'); set('sData', mb(s.totalSize)); }
   else { set('sDrop', '—'); set('sSpeed', '—'); set('sFps', '—'); set('sData', '—'); }
   set('sRecSize', rc.status === 'rec' ? mb(rc.size || 0) : '—');
+  renderCpu(S.cpu);
   drawSpark(st.hist || [], S.cfg.kbps);
 
   document.title = (rc.status === 'rec' ? '● REC ' + recT + ' — ' : '') + (airLive ? 'ON AIR ' + airT + ' — ' : '') + 'ScènePro Diffusion';
@@ -356,6 +378,25 @@ function render(){
   if(tab === 'link') renderLinkLive();
 }
 const baseName = p => String(p || '').split(/[\\/]/).pop();
+// zone CPU : bleu = ce logiciel (orange au-delà de 60 %, rouge au-delà de 85 % de l'ordinateur), gris = autres applications
+const CPU_PARTS = {interface: 'Interface', diffusion: 'Encodage diffusion', rec: 'Encodage REC', apercu: 'Aperçu'};
+function renderCpu(c){
+  const pct = v => (v == null ? '—' : (v < 10 ? v.toFixed(1) : Math.round(v)) + ' %');
+  if(!c){ $('#cpuApp').textContent = '—'; $('#cpuPc').textContent = 'PC —'; return; }
+  const app = Math.min(100, c.app || 0), other = Math.max(0, Math.min(100 - app, (c.total || 0) - app));
+  const lvl = c.total >= 85 ? 'crit' : c.total >= 60 ? 'hot' : '';
+  $('#cpuChip').className = 'chip cpuchip ' + lvl;
+  $('#cpuApp').textContent = pct(c.app); $('#cpuPc').textContent = 'PC ' + pct(c.total);
+  $('#cpuBarApp').style.width = app + '%'; $('#cpuBarOther').style.width = other + '%';
+  $('#cpuChip').title = `Processeur : ce logiciel ${pct(c.app)} · ordinateur entier ${pct(c.total)} (${c.cores} cœurs)`;
+  const st = document.querySelector('.cpust'); if(!st) return;
+  st.className = 'st span4 cpust ' + lvl;
+  $('#sCpuApp').textContent = pct(c.app); $('#sCpuPc').textContent = 'PC ' + pct(c.total);
+  $('#sCpuBarApp').style.width = app + '%'; $('#sCpuBarOther').style.width = other + '%';
+  $('#sCpuParts').innerHTML = Object.entries(c.parts || {}).map(([k, v]) => `<span>${esc(CPU_PARTS[k] || k)} <b>${pct(v)}</b></span>`).join('') +
+    `<span>Autres applications <b>${pct(Math.max(0, (c.total || 0) - (c.app || 0)))}</b></span><span>${c.cores} cœurs</span>` +
+    (c.total >= 85 ? '<span style="color:var(--red)">Processeur saturé : baissez la qualité ou fermez d\'autres applications</span>' : '');
+}
 const activeDests = () => (cfg ? cfg.dests : S.cfg.dests).filter(d => d.enabled && (d.server || d.key));
 
 function drawSpark(hist, target){

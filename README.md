@@ -14,6 +14,28 @@ Prévisualisation / Programme · 3 programmes · sorties HDMI · diffusion en li
 
 L'application se met à jour toute seule : quand une nouvelle version est publiée ici, ScènePro la télécharge et propose de redémarrer.
 
+## 📸 Aperçu
+
+**La régie** : prévisualisation (vert) et programme (rouge), les 3 programmes avec leur routage (S1 · S2 · S3 · WEB), le PIP et le bandeau du Synthé à l'antenne.
+![Régie ScènePro](docs/captures/01-regie.png)
+
+**La table de mixage** : médias du PGM 1, entrées live, micros, masters SALLE et WEB avec vumètres.
+![Table de mixage](docs/captures/02-regie-mixage.png)
+
+**Poste Synthé** : conducteur des habillages (noms-titres, bandeaux, logos, horloge), choix des programmes où chaque élément s'incruste.
+![Poste Synthé](docs/captures/03-synthe.png)
+
+**Poste Diffusion** : programme web reçu de la régie, ON AIR / REC, plateformes, santé du flux et processeur.
+![Poste Diffusion](docs/captures/04-diffusion.png)
+
+**Poste Enregistrement** : un fichier par bus, aperçu en direct, durée, taille, débit et espace disque.
+![Poste Enregistrement](docs/captures/05-enregistrement.png)
+
+**Conducteur** (page web, sur n'importe quel appareil) : ce qui reste à diffuser, heures prévues et estimées, retard ou avance.
+![Conducteur](docs/captures/06-conducteur.png)
+
+> Captures refaites automatiquement avec `scripts/captures.js` (contenu de démonstration).
+
 ## ✨ Fonctions
 
 - **Prévisualisation (vert) / Programme (rouge)** : préparez le média suivant sans toucher à ce qui est à l'antenne. CUT, AUTO (fondu), SUIVANT, NOIR.

@@ -16,6 +16,7 @@ const { spawn } = require('child_process');
 const WebSocket = require('ws');
 const { WebSocketServer } = require('ws');
 const discovery = require('./discovery');
+const { createCpuMeter } = require('./cpu');
 
 const SOURCES = ['pgm1', 'pgm2', 'pgm3', 'web'];
 const LABEL = { pgm1: 'PGM 1', pgm2: 'PGM 2', pgm3: 'PGM 3', web: 'WEB' };
@@ -62,6 +63,8 @@ function startRecorder(opts = {}) {
   const uiClients = new Set();
   // régies trouvées automatiquement sur le réseau (annonces UDP) + résultat du dernier test d'adresse
   let found = [], test = null;
+  // CPU du poste (fenêtre + moteur + ffmpeg d'enregistrement et d'aperçu) et du PC
+  const cpu = createCpuMeter({ childPids: () => SOURCES.flatMap(k => [rec[k].ff && rec[k].ff.pid, rec[k].pv && rec[k].pv.pid]) });
   const disc = discovery.listen(l => { found = l; push(); });
   function testRegie(target) {
     const t = (target || cfg.regie).trim().replace(/^https?:\/\//, '').replace(/\/.*$/, '');
@@ -170,12 +173,12 @@ function startRecorder(opts = {}) {
     log(`${LABEL[k]} → ${file}`);
     openPreview(k);
   }
-  // aperçu en direct : un 2e ffmpeg très léger ne décode que les images clés (1 par seconde) et sort des JPEG 320 px
+  // aperçu en direct : un 2e ffmpeg léger sort une image JPEG 320 px par seconde (fiable même sur une image fixe)
   function openPreview(k) {
     const r = rec[k];
     closePreview(k);
-    const pv = spawn(FFMPEG, ['-hide_banner', '-loglevel', 'error', '-skip_frame', 'nokey', '-i', 'pipe:0', '-an', '-fps_mode', 'passthrough',
-      '-vf', 'scale=320:-2', '-q:v', '7', '-f', 'image2pipe', '-c:v', 'mjpeg', 'pipe:1'], { stdio: ['pipe', 'pipe', 'ignore'], windowsHide: true });
+    const pv = spawn(FFMPEG, ['-hide_banner', '-loglevel', 'error', '-i', 'pipe:0', '-an',
+      '-vf', 'fps=1,scale=320:-2', '-q:v', '7', '-f', 'image2pipe', '-c:v', 'mjpeg', 'pipe:1'], { stdio: ['pipe', 'pipe', 'ignore'], windowsHide: true });
     r.pv = pv;
     let buf = Buffer.alloc(0);
     pv.stdout.on('data', d => {
@@ -259,7 +262,7 @@ function startRecorder(opts = {}) {
 
   /* ---------- interface (page enregistreur.html) ---------- */
   function state() {
-    const s = { type: 'state', cfg, link, found, test, ffmpeg: FFMPEG, disk: disk(), recent: recent.slice(0, 12).map(x => ({ name: path.basename(x.file), size: x.size, t: x.t, source: x.source })), sources: {} };
+    const s = { type: 'state', cfg, link, found, test, cpu: cpu.get(), ffmpeg: FFMPEG, disk: disk(), recent: recent.slice(0, 12).map(x => ({ name: path.basename(x.file), size: x.size, t: x.t, source: x.source })), sources: {} };
     SOURCES.forEach(k => { const r = rec[k]; s.sources[k] = { thumbAt: r.status === 'rec' ? (r.thumbAt || 0) : 0, flat: r.thumbLuma === 'flat', status: r.status, uptime: r.t0 ? Date.now() - r.t0 : 0, bytes: r.bytes, kbps: r.kbps, file: r.file ? path.basename(r.file) : '', err: r.err, part: r.part }; });
     return s;
   }
@@ -343,7 +346,7 @@ function startRecorder(opts = {}) {
           port: PORT, url: `http://localhost:${PORT}/`,
           recording: () => SOURCES.some(k => rec[k].status !== 'idle'),
           close() {
-            closing = true; clearInterval(tick); clearTimeout(ctlTimer); disc.close();
+            closing = true; clearInterval(tick); clearTimeout(ctlTimer); disc.close(); cpu.close();
             SOURCES.forEach(stopRec);
             if (ctl) { try { ctl.terminate(); } catch (e) {} }
             wssUi.clients.forEach(c => c.terminate());

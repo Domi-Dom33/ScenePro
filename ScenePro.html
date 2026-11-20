@@ -53,6 +53,9 @@ header{display:flex;align-items:center;gap:10px;padding:0 12px;background:#0d101
 .spill:hover{border-color:var(--line2);color:#fff}
 .spill .led{width:8px;height:8px;border-radius:50%;background:var(--dim);flex:none}
 .spill.on{color:#fff;border-color:rgba(255,59,59,.55);background:var(--red-bg)}
+.spill.cpu{cursor:default;font-family:var(--mono);letter-spacing:0}
+.spill.cpu.warn{color:var(--amber);border-color:rgba(255,176,32,.5)}
+.spill.cpu.bad{color:#fff;border-color:var(--red);background:var(--red-bg)}
 .spill.on .led{background:var(--red);box-shadow:0 0 8px var(--red)}
 .spill .kb{font-family:var(--mono);font-weight:500;letter-spacing:0;color:#cfd5dc}
 .spill.lv-good .led{background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse 1.6s infinite}
@@ -379,6 +382,7 @@ kbd{font-family:var(--mono);font-size:11px;background:var(--panel3);border:1px s
       <button class="spill" id="pillOut2" title="Sortie vidéo 3"><i class="led"></i>SORTIE 3</button>
       <button class="spill" id="pillGfx" title="Synthé / habillage — cliquer pour ouvrir le poste Synthé"><i class="led"></i><span id="gfxLbl">SYNTHÉ</span></button>
       <button class="spill" id="pillEnr" title="Poste Enregistrement"><i class="led"></i><span id="enrLbl">ENR</span></button>
+      <span class="spill cpu" id="pillCpu" title="Processeur : utilisation par la régie ScènePro / par tout l'ordinateur"><span id="cpuLbl">CPU —</span></span>
       <button class="spill" id="pillProg" title="Programmes (reportages, clips) — cliquer pour ouvrir le poste Programmes"><i class="led"></i><span id="progLbl">PROGRAMMES</span></button>
       <button class="spill" id="pillLive" title="Diffusion en ligne (poste Diffusion)"><i class="led"></i><span id="liveLbl">DIFFUSION</span><span class="kb" id="liveKb"></span></button>
       <button class="spill" id="pillRec" title="Enregistrement (sur le poste Diffusion)"><i class="led"></i><span id="recLbl">REC</span></button>
@@ -1639,7 +1643,7 @@ const Live = {
     ws.onmessage = e => {
       let m; try{ m = JSON.parse(e.data); }catch(err){ return; }
       if(m.type === 'stations'){ this.stations = m.n || 0; if(m.want) this.setWant(m.want, false); this.syncSending(); }
-      else if(m.type === 'feed-restart'){ if(this.sending) this.restartRecorder(); }
+      else if(m.type === 'feed-restart'){ if(this.sending){ this.stopSending(); this.startSending(); } else this.syncSending(); }
       else if(m.type === 'want') this.setWant(m, true);
       else if(m.type === 'route'){ const b = clamp((+m.bus || 1) - 1, 0, NBUS - 1); if(state.route[WEB] !== b){ setRoute(WEB, b); render(); } }
       else if(m.type === 'stream') this.onRemote(m);
@@ -1666,7 +1670,7 @@ const Live = {
     this.startCompositor();
     this.sending = this.startRecorder();
   },
-  stopSending(){ this.gen++; this.stopRecorder(); this.stopCompositor(); this.sending = false; },
+  stopSending(){ this.gen++; this.stopRecorder(); this.stopCompositor(); this.sending = false; if(!this.stations){ clearInterval(this.watchT); this.watchT = null; } },
   startCompositor(){
     const [W, H] = RES[this.want.res] || RES['720'];
     if(!this.canvas){ this.canvas = document.createElement('canvas'); }
@@ -1687,7 +1691,9 @@ const Live = {
     if(this.worker) this.worker.postMessage(0);
     if(this.timerFallback){ clearInterval(this.timerFallback); this.timerFallback = null; }
   },
-  draw(){
+  // une erreur de dessin ne doit jamais figer l'image envoyée (sinon l'encodeur ne produit plus rien)
+  draw(){ try{ this.drawFrame(); }catch(e){ this.drawErr = (this.drawErr || 0) + 1; if(this.drawErr === 1) console.warn('Diffusion : erreur de composition', e); } },
+  drawFrame(){
     const g = this.g, W = this.canvas.width, H = this.canvas.height, st = Engine.buses[state.route[WEB]].mini;
     g.globalAlpha = 1; g.fillStyle = '#000'; g.fillRect(0, 0, W, H);
     for(const layer of st.el.querySelectorAll('.layer')){
@@ -1725,12 +1731,18 @@ const Live = {
     g.globalAlpha = 1;
     this.composed++;
   },
+  // codecs essayés dans l'ordre ; si l'encodeur ne produit rien (encodeur H.264 matériel déjà pris
+  // par un autre enregistrement, par exemple), la surveillance passe au suivant
+  CODECS: ['video/webm;codecs=h264,opus', 'video/webm;codecs=vp8,opus', 'video/webm'],
+  codecIdx: 0, lastData: 0, recStart: 0, stalls: 0, watchT: null, capStream: null, audioClone: null,
   startRecorder(){
     const gen = ++this.gen;
-    const stream = this.canvas.captureStream(this.want.fps);
-    if(Mixer.dest){ const at = Mixer.dest.stream.getAudioTracks()[0]; if(at) stream.addTrack(at); }
-    const types = ['video/webm;codecs=h264,opus', 'video/webm;codecs=vp8,opus', 'video/webm'];
-    const mime = this.mime = types.find(t => MediaRecorder.isTypeSupported(t)) || '';
+    this.releaseCapture();
+    const stream = this.capStream = this.canvas.captureStream(this.want.fps);
+    // copie indépendante de la piste son du master WEB : elle peut être partagée avec d'autres enregistrements
+    if(Mixer.dest){ const at = Mixer.dest.stream.getAudioTracks()[0]; if(at){ this.audioClone = at.clone(); stream.addTrack(this.audioClone); } }
+    let i = this.codecIdx; while(i < this.CODECS.length && !MediaRecorder.isTypeSupported(this.CODECS[i])) i++;
+    const mime = this.mime = this.CODECS[i] || '';
     const [W, H] = RES[this.want.res] || RES['720'];
     try{
       // débit élevé : c'est un signal de liaison (réseau local), le poste Diffusion réencode ensuite
@@ -1740,16 +1752,37 @@ const Live = {
     const ws = this.ws;
     if(!ws || ws.readyState !== 1) return false;
     ws.send(JSON.stringify({type: 'init', mime, w: W, h: H, fps: this.want.fps}));
+    this.recStart = Date.now(); this.lastData = 0;
     this.rec.ondataavailable = ev => {
       if(gen !== this.gen || !ev.data || !ev.data.size || this.ws !== ws || ws.readyState !== 1) return;
+      if(ev.data.size > 8) this.lastData = Date.now();
       if(ws.bufferedAmount > 64e6) return; // serveur local saturé : on saute plutôt que d'accumuler
       ws.send(ev.data);
     };
+    this.rec.onerror = e => { console.warn('Diffusion : erreur de l\'encodeur', e.error || e); this.lastData = 0; this.recStart = 0; };
     this.rec.start(250);
+    this.startWatch();
     return true;
   },
+  // surveillance : un encodeur « en cours » qui ne produit rien depuis 4 s est relancé, puis on change de codec
+  startWatch(){
+    if(this.watchT) return;
+    this.watchT = setInterval(() => {
+      if(!this.sending || !this.rec){ return; }
+      const now = Date.now(), since = this.lastData || this.recStart;
+      if(now - since < 4000) { if(this.lastData) this.stalls = 0; return; }
+      this.stalls++;
+      if(this.stalls >= 2 && this.codecIdx < this.CODECS.length - 1){ this.codecIdx++; this.stalls = 0; }
+      console.warn(`Diffusion : l'encodeur ne produit plus d'images, relance (${this.CODECS[this.codecIdx]})`);
+      this.stopSending(); this.startSending();
+    }, 1000);
+  },
+  releaseCapture(){
+    if(this.capStream){ this.capStream.getVideoTracks().forEach(t => t.stop()); this.capStream = null; }
+    if(this.audioClone){ this.audioClone.stop(); this.audioClone = null; }
+  },
   restartRecorder(){ this.stopRecorder(); this.sending = this.startRecorder(); },
-  stopRecorder(){ if(this.rec){ const r = this.rec; this.rec = null; try{ if(r.state !== 'inactive') r.stop(); }catch(e){} } },
+  stopRecorder(){ if(this.rec){ const r = this.rec; this.rec = null; r.ondataavailable = null; r.onerror = null; try{ if(r.state !== 'inactive') r.stop(); }catch(e){} } this.releaseCapture(); },
 
   // commandes envoyées au poste Diffusion
   cmd(c){
@@ -2574,24 +2607,43 @@ const Feeds = {
   },
   startRec(f){
     if(f.rec){ const r = f.rec; f.rec = null; try{ r.ondataavailable = null; r.stop(); }catch(e){} }
+    if(f.tracks){ f.tracks.forEach(t => { try{ t.stop(); }catch(e){} }); f.tracks = null; }
     if(!f.ws || f.ws.readyState !== 1) return;
     const stream = f.canvas.captureStream(f.cfg.fps);
-    if(f.src === 'pgm1' || f.src === 'web'){ Mixer.init(); Mixer.resume(); if(Mixer.dest){ const at = Mixer.dest.stream.getAudioTracks()[0]; if(at) stream.addTrack(at); } }
-    const types = ['video/webm;codecs=h264,opus', 'video/webm;codecs=vp8,opus', 'video/webm'];
-    const mime = types.find(t => MediaRecorder.isTypeSupported(t)) || '';
+    f.tracks = [...stream.getVideoTracks()];
+    if(f.src === 'pgm1' || f.src === 'web'){ Mixer.init(); Mixer.resume(); if(Mixer.dest){ const at = Mixer.dest.stream.getAudioTracks()[0]; if(at){ const c = at.clone(); stream.addTrack(c); f.tracks.push(c); } } }
+    // codecs essayés dans l'ordre ; un encodeur matériel H.264 déjà occupé peut se bloquer sans erreur → repli VP8
+    const types = ['video/webm;codecs=h264,opus', 'video/webm;codecs=vp8,opus', 'video/webm'].filter(t => MediaRecorder.isTypeSupported(t));
+    f.codecIdx = Math.min(f.codecIdx || 0, Math.max(0, types.length - 1));
+    const mime = types[f.codecIdx] || '';
     let rec;
     try{ rec = new MediaRecorder(stream, {mimeType: mime, videoBitsPerSecond: f.canvas.width >= 1920 ? 16e6 : 10e6, audioBitsPerSecond: 192000, videoKeyFrameIntervalDuration: 1000}); }
-    catch(e){ toast('Enregistrement ' + f.src.toUpperCase() + ' : encodeur indisponible (' + e.message + ')'); return; }
-    f.rec = rec;
+    catch(e){ if(f.codecIdx < types.length - 1){ f.codecIdx++; return this.startRec(f); } toast('Enregistrement ' + f.src.toUpperCase() + ' : encodeur indisponible (' + e.message + ')'); return; }
+    f.rec = rec; f.lastData = Date.now(); f.started = Date.now();
     f.ws.send(JSON.stringify({type: 'init', mime, w: f.canvas.width, h: f.canvas.height, fps: f.cfg.fps}));
-    rec.ondataavailable = ev => { if(f.rec === rec && ev.data && ev.data.size && f.ws && f.ws.readyState === 1) f.ws.send(ev.data); };
+    rec.ondataavailable = ev => { if(f.rec === rec && ev.data && ev.data.size && f.ws && f.ws.readyState === 1){ f.ws.send(ev.data); f.lastData = Date.now(); f.fails = 0; } };
+    rec.onerror = () => { if(f.rec === rec) this.watch(f, true); };
     rec.start(250);
+    clearInterval(f.watchT);
+    f.watchT = setInterval(() => this.watch(f), 2000);
+  },
+  // surveillance : si l'encodeur ne produit plus rien depuis 4 s, on le relance ; au 2e échec, codec suivant
+  watch(f, force){
+    if(this.active[f.src] !== f){ clearInterval(f.watchT); return; }
+    if(!f.rec || !f.ws || f.ws.readyState !== 1) return;
+    if(!force && Date.now() - f.lastData < 4000) return;
+    f.fails = (f.fails || 0) + 1;
+    if(f.fails >= 2){ f.codecIdx = (f.codecIdx || 0) + 1; f.fails = 0; }
+    console.warn('Enregistrement ' + f.src + ' : encodeur muet, relance (codec ' + (f.codecIdx || 0) + ')');
+    this.startRec(f);
   },
   restart(src){ const f = this.active[src]; if(f) this.startRec(f); },
   stop(src){
     const f = this.active[src]; if(!f) return;
     delete this.active[src];
+    clearInterval(f.watchT);
     if(f.rec){ try{ f.rec.ondataavailable = null; f.rec.stop(); }catch(e){} f.rec = null; }
+    if(f.tracks){ f.tracks.forEach(t => { try{ t.stop(); }catch(e){} }); f.tracks = null; }
     if(f.ws){ const w = f.ws; f.ws = null; try{ w.close(); }catch(e){} }
     if(!Object.keys(this.active).length) this.stopTimer();
   },
@@ -2778,6 +2830,17 @@ const Rundown = {
   },
 };
 setInterval(() => Rundown.push(), 1000);
+// zone CPU : utilisation du processeur par la régie et par tout le PC
+setInterval(async () => {
+  if(!/^https?:/.test(location.protocol)) return;
+  try{
+    const c = await (await fetch('/api/cpu', {cache: 'no-store'})).json();
+    const p = $('#pillCpu'); if(!p) return;
+    $('#cpuLbl').textContent = `CPU ${c.app}% · PC ${c.pc}%`;
+    p.className = 'spill cpu ' + (c.pc >= 90 ? 'bad' : c.pc >= 75 ? 'warn' : '');
+    p.title = `Processeur (${c.cores} cœurs) : la régie ScènePro utilise ${c.app} %, tout l'ordinateur ${c.pc} %.` + (c.pc >= 75 ? ' Charge élevée : fermez les logiciels inutiles, ou baissez la qualité des flux.' : '');
+  }catch(e){}
+}, 2000);
 function rundownDialog(){
   const L = Gfx.lan || {}, ips = (L.ips || []).map(a => a.ip), port = L.port || location.port || 7350;
   openModal('Conducteur', `

@@ -16,6 +16,7 @@ const { spawn, execFileSync } = require('child_process');
 const { WebSocketServer } = require('ws');
 const createBusFeed = require('./busfeed');
 const discovery = require('./discovery');
+const { createCpuMeter } = require('./cpu');
 
 const VERSION = (() => { try { return require('./package.json').version; } catch (e) { return '0.0.0'; } })();
 const COMMANDS = ['auto', 'cut', 'next', 'black', 'pause', 'restart', 'mute', 'prev', 'pvwnext', 'cue',
@@ -72,6 +73,7 @@ function startServer(opts = {}) {
 
   const controlClients = new Set();
   let lastState = {};
+  const cpu = createCpuMeter(); // CPU de la régie (application) et du PC
   let rundown = null; // conducteur calculé par la régie (page /conducteur)
   let PORT = opts.port || 7350;
   let allowed = [];
@@ -168,6 +170,10 @@ function startServer(opts = {}) {
       }
       res.writeHead(200);
       return res.end(JSON.stringify({ ok: true, now: Date.now(), regie: controlClients.size > 0, r: rundown }));
+    }
+    if (url.pathname === '/api/cpu') {
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+      return res.end(JSON.stringify(cpu.get()));
     }
     if (url.pathname === '/api/hello') {
       res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', 'Access-Control-Allow-Origin': '*' });
@@ -484,6 +490,7 @@ function startServer(opts = {}) {
       if (m.type === 'status' && m.s && typeof m.s === 'object') { ws._status = m.s; pushStream(); }
       else if (m.type === 'want') { feedWant = { res: ['480', '720', '1080'].includes(m.res) ? m.res : '720', fps: clampInt(m.fps, 15, 60, 30) }; sendJ(liveSender, { type: 'want', ...feedWant }); }
       else if (m.type === 'route') sendJ(liveSender, { type: 'route', bus: clampInt(m.bus, 1, 3, 1) });
+      else if (m.type === 'resync') { log(`Poste Diffusion ${ws._ip} : aucune image reçue, relance de l'envoi de la régie`); sendJ(liveSender, { type: 'feed-restart' }); }
     });
     ws.on('close', () => { feedClients.delete(ws); log(`Poste Diffusion déconnecté (${ws._ip})`); stationsChanged(); });
   });
