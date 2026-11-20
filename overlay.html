@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>ScènePro — Habillage (overlay)</title>
+<style>
+html,body{margin:0;height:100%;overflow:hidden;background:transparent}
+canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+<script src="/gfx-render.js"></script>
+<script>
+/* Page d'incrustation transparente : à ajouter comme « source navigateur » dans OBS, vMix, CasparCG…
+   (http://localhost:7350/overlay — 1920 × 1080). Elle affiche ce qui est à l'antenne dans le poste Synthé. */
+'use strict';
+const cv = document.getElementById('cv'), g = cv.getContext('2d');
+const scene = new GfxRender.Scene();
+function size(){ cv.width = Math.round(innerWidth * devicePixelRatio); cv.height = Math.round(innerHeight * devicePixelRatio); }
+addEventListener('resize', size); size();
+function loop(){ g.clearRect(0, 0, cv.width, cv.height); scene.draw(g, cv.width, cv.height); requestAnimationFrame(loop); }
+requestAnimationFrame(loop);
+// depuis un autre ordinateur : http://IP-de-la-régie:7350/overlay?code=123456
+const code = new URLSearchParams(location.search).get('code') || '';
+function connect(){
+  const ws = new WebSocket(`ws://${location.host}/gfx?role=overlay&k=${encodeURIComponent(code)}`);
+  ws.onmessage = e => { let m; try{ m = JSON.parse(e.data); }catch(err){ return; } if(m.type === 'gfx') scene.update(m.state); };
+  ws.onclose = e => {
+    if(e.code === 4401 || e.code === 4403){
+      // message visible seulement dans l'aperçu de la source, puis nouvel essai plus tard
+      scene.update({items: [{id: 'err', type: 'badge', on: true, corner: 'tl', dot: false, color: '#b0161f',
+        text: e.code === 4401 ? 'ScènePro : ajoutez ?code=XXXXXX à l\'adresse' : 'ScènePro : accès bloqué'}]});
+      setTimeout(connect, 60000); return;
+    }
+    setTimeout(connect, 2000);
+  };
+}
+connect();
+</script>
+</body>
+</html>

@@ -1,0 +1,31 @@
+# Construit l'installateur Windows et le publie dans les « Releases » GitHub.
+# Se déclenche quand on pousse une étiquette de version (ex. : v2.0.1),
+# ou à la main depuis l'onglet « Actions ».
+name: Publier ScènePro
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Installer les dépendances
+        run: npm ci
+
+      - name: Construire et publier l'installateur
+        run: npx electron-builder --win --publish always
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,499 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ScènePro Diffusion</title>
+<link rel="icon" type="image/png" href="/icon.png">
+<style>
+:root{
+  --bg:#141619;--panel:#1d2024;--panel2:#24282d;--panel3:#2d3238;--line:#30353c;--line2:#3d434b;
+  --text:#e8eaed;--muted:#8e959e;--dim:#5d646d;
+  --red:#ff2d2d;--red-d:#a3121a;--red-bg:rgba(255,45,45,.13);--green:#29d16b;--green-bg:rgba(41,209,107,.12);--amber:#ffb020;--blue:#3d8bff;
+  --mono:"Cascadia Mono","Consolas","SF Mono",ui-monospace,monospace;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--text);font:13px/1.4 "Segoe UI",system-ui,sans-serif;user-select:none;overflow:hidden}
+button{font:inherit;color:inherit;cursor:pointer}
+button:disabled{cursor:default;opacity:.45}
+input,select{font:inherit}
+.app{height:100%;display:grid;grid-template-rows:48px minmax(0,1fr) 280px;gap:10px;padding:0 10px 10px;position:relative}
+/* cadre rouge autour de la fenêtre pendant l'enregistrement */
+.app::after{content:"";position:fixed;inset:0;border:3px solid transparent;pointer-events:none;z-index:50;transition:border-color .3s}
+body.recording .app::after{border-color:var(--red);animation:recframe 2s infinite}
+@keyframes recframe{50%{border-color:var(--red-d)}}
+@keyframes blink{50%{opacity:.25}}
+@keyframes pulse{50%{opacity:.45}}
+
+header{display:flex;align-items:center;gap:14px;border-bottom:1px solid var(--line);margin:0 -10px;padding:0 16px;background:#101215}
+.brand{display:flex;align-items:center;gap:9px;font-weight:700;letter-spacing:.3px;font-size:14px}
+.brand .mk{width:26px;height:26px;display:block}
+.brand small{font-weight:600;color:var(--muted);letter-spacing:2px;font-size:10.5px;margin-left:2px}
+.chip{display:flex;align-items:center;gap:7px;height:28px;padding:0 10px;border-radius:6px;background:var(--panel2);border:1px solid var(--line);font-size:11px;font-weight:700;letter-spacing:.8px;color:var(--muted);white-space:nowrap}
+.chip .led{width:8px;height:8px;border-radius:50%;background:var(--dim)}
+.chip.ok{color:#fff}.chip.ok .led{background:var(--green);box-shadow:0 0 8px var(--green)}
+.chip.wait .led{background:var(--amber);animation:blink .8s infinite}
+.chip.bad{color:#ffb3b3;border-color:rgba(255,45,45,.5)}.chip.bad .led{background:var(--red)}
+.chip .kb{font-family:var(--mono);font-weight:500;letter-spacing:0;color:#cfd5dc}
+.hdr-tally{display:flex;gap:8px}
+.tally{height:28px;padding:0 12px;border-radius:5px;display:flex;align-items:center;gap:8px;font-weight:800;letter-spacing:1.5px;font-size:11.5px;background:var(--panel2);border:1px solid var(--line);color:var(--dim)}
+.tally b{font-family:var(--mono);font-weight:600;letter-spacing:0;font-size:13px}
+.tally.air{background:var(--red);border-color:var(--red);color:#fff}
+.tally.wait{border-color:var(--amber);color:var(--amber)}
+.tally.rec{background:var(--red);border-color:var(--red);color:#fff}
+.tally.rec .dot{width:9px;height:9px;border-radius:50%;background:#fff;animation:blink 1s infinite}
+.spacer{flex:1}
+.clock{font-family:var(--mono);font-size:17px;color:#cfd5dc}
+
+main{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(380px,1fr);gap:10px;min-height:0}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;min-height:0;display:flex;flex-direction:column}
+.ph{display:flex;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px solid var(--line);flex:none}
+.ph h2{margin:0;font-size:10.5px;letter-spacing:1.6px;color:var(--muted);text-transform:uppercase;font-weight:700}
+
+/* moniteur */
+.mon{flex:1;min-height:0;display:flex;gap:10px;padding:10px}
+.screen{flex:1;min-width:0;position:relative;background:#000;border-radius:6px;border:1px solid var(--line2);overflow:hidden;display:grid;place-items:center}
+.screen img{width:100%;height:100%;object-fit:contain;display:block}
+.screen .nosig{position:absolute;inset:0;display:grid;place-items:center;text-align:center;color:var(--dim);font-weight:700;letter-spacing:2px;font-size:13px;background:repeating-linear-gradient(45deg,#0c0d0f 0 12px,#101215 12px 24px)}
+.screen .nosig small{display:block;letter-spacing:0;font-weight:500;font-size:12px;margin-top:6px;color:var(--muted)}
+.ov{position:absolute;top:10px;display:flex;align-items:center;gap:7px;padding:4px 9px;border-radius:4px;font-weight:800;letter-spacing:1.5px;font-size:12px;background:rgba(0,0,0,.6);color:#fff;opacity:0;transition:opacity .2s}
+.ov.on{opacity:1}
+.ov b{font-family:var(--mono);font-weight:600;letter-spacing:0}
+#ovAir{left:10px;background:var(--red)}
+#ovRec{right:10px;border:1px solid var(--red)}
+#ovRec .dot{width:10px;height:10px;border-radius:50%;background:var(--red);animation:blink 1s infinite}
+.ovname{position:absolute;left:10px;bottom:10px;padding:3px 8px;border-radius:4px;background:rgba(0,0,0,.6);font-size:12px;max-width:70%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vu{width:26px;display:flex;gap:4px;flex:none;position:relative}
+.vu span{flex:1;background:#0b0c0e;border:1px solid var(--line);border-radius:3px;position:relative;overflow:hidden}
+.vu span i{position:absolute;left:0;right:0;bottom:0;height:0;background:linear-gradient(to top,var(--green) 0 70%,var(--amber) 70% 88%,var(--red) 88%)}
+.vu span em{position:absolute;left:0;right:0;height:2px;background:#fff;bottom:0;opacity:.8}
+.src{display:flex;align-items:center;gap:8px;padding:0 10px 10px}
+.src .lbl{font-size:10.5px;letter-spacing:1.4px;font-weight:700;color:var(--muted);margin-right:4px}
+.kbtn{height:40px;min-width:78px;padding:0 14px;border-radius:7px;border:1px solid var(--line2);background:linear-gradient(#2c3137,#24282d);font-weight:800;letter-spacing:1px;color:#cfd5dc;box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
+.kbtn:hover:not(:disabled){border-color:#56606b}
+.kbtn.on{background:linear-gradient(#ff4b4b,#d61d1d);border-color:#ff6b6b;color:#fff;box-shadow:0 0 14px rgba(255,45,45,.35)}
+.src .pname{margin-left:auto;color:var(--muted);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:45%}
+.src .pname b{color:var(--text)}
+
+/* transport */
+.tr{flex:1;min-height:0;display:flex;flex-direction:column;gap:10px;padding:10px;overflow:auto}
+.blk{background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:12px 14px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 14px;align-items:center}
+.blk.live{border-color:rgba(255,45,45,.6);background:linear-gradient(180deg,rgba(255,45,45,.1),var(--panel2) 70%)}
+.blk .t{font-size:10.5px;letter-spacing:1.6px;font-weight:700;color:var(--muted);text-transform:uppercase}
+.blk .tc{font-family:var(--mono);font-size:40px;line-height:1.1;color:#fff;letter-spacing:1px;font-weight:600}
+.blk .tc.off{color:#4a5058}
+.blk.live .tc{color:#fff}
+.blk .sub{font-size:12px;color:var(--muted);grid-column:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.blk .sub b{color:var(--text);font-weight:600}
+.big{grid-row:1 / span 3;grid-column:2;width:118px;height:84px;border-radius:10px;border:1px solid var(--line2);background:linear-gradient(#30353c,#24282d);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-weight:800;letter-spacing:1.6px;font-size:13px;color:#cfd5dc;box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 2px 0 #0d0e10}
+.big small{font-size:9.5px;letter-spacing:1px;font-weight:700;color:var(--dim)}
+.big:hover:not(:disabled){border-color:#5a646f}
+.big.on{background:linear-gradient(#ff4646,#c8161c);border-color:#ff7070;color:#fff;box-shadow:0 0 22px rgba(255,45,45,.45),inset 0 1px 0 rgba(255,255,255,.25)}
+.big.on small{color:#ffd0d0}
+.big.wait{border-color:var(--amber);color:var(--amber);animation:pulse 1s infinite}
+.big .rdot{width:26px;height:26px;border-radius:50%;background:#5a1a1d;border:3px solid #7a2a2e}
+.big.on .rdot{background:#fff;border-color:#ffd0d0;animation:blink 1s infinite}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.st{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px 10px;min-width:0}
+.st small{display:block;font-size:9.5px;letter-spacing:1.2px;font-weight:700;color:var(--muted);text-transform:uppercase;white-space:nowrap}
+.st b{display:block;font-family:var(--mono);font-size:16px;margin-top:3px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.st b.g{color:var(--green)}.st b.w{color:var(--amber)}.st b.r{color:var(--red)}
+.st.span2{grid-column:span 2}
+.st canvas{display:block;width:100%;height:34px;margin-top:4px}
+
+/* onglets du bas */
+.tabs{display:flex;gap:2px;padding:0 8px;border-bottom:1px solid var(--line);flex:none}
+.tabs button{height:36px;padding:0 14px;border:0;background:transparent;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px;font-weight:600}
+.tabs button.on{color:#fff;border-bottom-color:var(--red)}
+.tabs .spacer{flex:1}
+.tabbody{flex:1;min-height:0;overflow:auto;padding:12px}
+.txt{width:100%;height:32px;padding:0 9px;border-radius:6px;border:1px solid var(--line2);background:#111316;color:var(--text);outline:none}
+.txt:focus{border-color:var(--blue)}
+select.txt{padding:0 6px}
+.flabel{display:block;font-size:10px;letter-spacing:1.2px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:5px}
+.btn{height:32px;padding:0 12px;border-radius:6px;border:1px solid var(--line2);background:var(--panel3);display:inline-flex;align-items:center;gap:6px;font-weight:600;white-space:nowrap}
+.btn:hover{border-color:#56606b}
+.btn.primary{background:var(--blue);border-color:var(--blue);color:#fff}
+.btn.sm{height:28px;padding:0 10px;font-size:12px}
+.hint{font-size:12px;color:var(--muted);line-height:1.5;margin:8px 0 0}
+.hint b{color:var(--text)}
+.grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px 12px}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px 12px}
+.dests{display:grid;grid-template-columns:repeat(auto-fill,minmax(420px,1fr));gap:10px}
+.dest{border:1px solid var(--line2);background:var(--panel2);border-radius:9px;padding:10px}
+.dest.off{opacity:.55}
+.dest-h{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.dest .row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.svc{width:28px;height:28px;border-radius:7px;display:grid;place-items:center;font-weight:800;color:#fff;font-size:12px;flex:none}
+.keyrow{display:flex;gap:5px}.keyrow .txt{flex:1}
+.ib{width:32px;height:32px;border-radius:6px;border:1px solid var(--line2);background:var(--panel3);display:grid;place-items:center;flex:none;font-size:13px}
+.ib:hover{border-color:#56606b}
+.ib.x:hover{border-color:var(--red);color:var(--red)}
+.switch{position:relative;width:38px;height:22px;flex:none}
+.switch input{opacity:0;width:0;height:0}
+.switch span{position:absolute;inset:0;background:#3a4048;border-radius:11px;transition:.15s;cursor:pointer}
+.switch span::after{content:"";position:absolute;width:16px;height:16px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.15s}
+.switch input:checked+span{background:var(--green)}
+.switch input:checked+span::after{transform:translateX(16px)}
+.logbox{height:100%;min-height:120px;overflow:auto;background:#0b0c0e;border:1px solid var(--line);border-radius:7px;padding:8px 10px;font-family:var(--mono);font-size:11px;color:#9aa3ae;white-space:pre-wrap;user-select:text}
+.warn{padding:9px 12px;border-radius:7px;background:rgba(255,176,32,.1);border:1px solid rgba(255,176,32,.35);color:#ffd27a;font-size:12.5px;margin-bottom:10px}
+.err{padding:9px 12px;border-radius:7px;background:var(--red-bg);border:1px solid rgba(255,45,45,.45);color:#ffb3b3;font-size:12.5px;margin-bottom:10px}
+.conn{display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:10px;align-items:end;max-width:900px}
+.files{margin-top:8px;font-family:var(--mono);font-size:11.5px;color:var(--muted);user-select:text}
+#toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(20px);background:#262b32;border:1px solid var(--line2);padding:10px 16px;border-radius:8px;opacity:0;transition:.2s;z-index:100;pointer-events:none;box-shadow:0 10px 30px rgba(0,0,0,.5)}
+#toast.on{opacity:1;transform:translateX(-50%)}
+::-webkit-scrollbar{width:10px;height:10px}::-webkit-scrollbar-thumb{background:#2c3138;border-radius:5px;border:2px solid var(--panel)}::-webkit-scrollbar-track{background:transparent}
+@media (max-width:1100px){main{grid-template-columns:1fr}.app{grid-template-rows:48px auto 300px;overflow:auto}body{overflow:auto}.grid4{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="brand"><img class="mk" src="/icon.png" alt="">ScènePro <small>DIFFUSION</small></div>
+    <div class="chip" id="chipFeed" title="Liaison avec la régie"><i class="led"></i><span id="feedLbl">RÉGIE</span><span class="kb" id="feedKb"></span></div>
+    <div class="spacer"></div>
+    <div class="hdr-tally">
+      <div class="tally" id="tAir">ON AIR <b id="tAirTc">00h00m00s</b></div>
+      <div class="tally" id="tRec"><i class="dot"></i>REC <b id="tRecTc">00h00m00s</b></div>
+    </div>
+    <div class="clock" id="clock">00:00:00</div>
+  </header>
+
+  <main>
+    <section class="panel">
+      <div class="ph"><h2>Programme web reçu de la régie</h2><div class="spacer"></div><span class="chip" id="fmtChip" style="height:22px">—</span></div>
+      <div class="mon">
+        <div class="screen">
+          <img id="pv" alt="">
+          <div class="nosig" id="nosig"><div>PAS DE SIGNAL<small id="nosigSub">En attente de la régie…</small></div></div>
+          <div class="ov" id="ovAir">ON AIR <b id="ovAirTc"></b></div>
+          <div class="ov" id="ovRec"><i class="dot"></i>REC <b id="ovRecTc"></b></div>
+          <div class="ovname" id="ovName" style="display:none"></div>
+        </div>
+        <div class="vu" title="Niveau du son envoyé (master WEB de la régie)"><span><i id="vuL"></i><em id="pkL"></em></span><span><i id="vuR"></i><em id="pkR"></em></span></div>
+      </div>
+      <div class="src">
+        <span class="lbl">SOURCE WEB</span>
+        <button class="kbtn" data-bus="1" title="Envoyer le PGM 1 sur le web (avec le son)">PGM 1</button>
+        <button class="kbtn" data-bus="2" title="Envoyer le PGM 2 sur le web">PGM 2</button>
+        <button class="kbtn" data-bus="3" title="Envoyer le PGM 3 sur le web">PGM 3</button>
+        <span class="pname" id="pname"></span>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="ph"><h2>Contrôle</h2></div>
+      <div class="tr">
+        <div class="blk" id="blkAir">
+          <div class="t">Diffusion en ligne</div>
+          <button class="big" id="btnAir" title="Démarrer / arrêter la diffusion (Ctrl+Espace)">ON AIR<small id="btnAirSub">DÉMARRER</small></button>
+          <div class="tc off" id="airTc">00h00m00s</div>
+          <div class="sub" id="airSub">Hors ligne</div>
+        </div>
+        <div class="blk" id="blkRec">
+          <div class="t">Enregistrement</div>
+          <button class="big" id="btnRec" title="Démarrer / arrêter l'enregistrement (Ctrl+R)"><i class="rdot"></i>REC</button>
+          <div class="tc off" id="recTc">00h00m00s</div>
+          <div class="sub" id="recSub">Arrêté</div>
+        </div>
+        <div class="stats">
+          <div class="st"><small>Santé du flux</small><b id="sHealth">—</b></div>
+          <div class="st span2"><small>Débit envoyé</small><b id="sKb">—</b><canvas id="spark"></canvas></div>
+          <div class="st"><small>Images perdues</small><b id="sDrop">—</b></div>
+          <div class="st"><small>Vitesse d'encodage</small><b id="sSpeed">—</b></div>
+          <div class="st"><small>Images / s</small><b id="sFps">—</b></div>
+          <div class="st"><small>Données envoyées</small><b id="sData">—</b></div>
+          <div class="st"><small>Fichier REC</small><b id="sRecSize">—</b></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <section class="panel">
+    <div class="tabs" id="tabs">
+      <button data-t="dest" class="on">Plateformes</button>
+      <button data-t="quality">Qualité</button>
+      <button data-t="rec">Enregistrement</button>
+      <button data-t="link">Liaison régie</button>
+      <button data-t="log">Journal</button>
+    </div>
+    <div class="tabbody" id="tabbody"></div>
+  </section>
+</div>
+<div id="toast"></div>
+
+<script>
+'use strict';
+const $ = s => document.querySelector(s);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const nf = n => Math.round(n).toLocaleString('fr-FR');
+const uid = () => Math.random().toString(36).slice(2, 10);
+const p2 = n => String(n).padStart(2, '0');
+// durée au format 00h30m52s
+function hms(ms){ let s = Math.max(0, Math.floor((ms || 0) / 1000)); const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60); s %= 60; return `${p2(h)}h${p2(m)}m${p2(s)}s`; }
+const mb = b => b >= 1073741824 ? (b / 1073741824).toFixed(2) + ' Go' : (b / 1048576).toFixed(1) + ' Mo';
+
+const SERVICES = {
+  facebook: {name: 'Facebook Live', short: 'f', color: '#1877f2', server: 'rtmps://live-api-s.facebook.com:443/rtmp/',
+    help: 'Facebook › Vidéo en direct (Live Producer) › « Logiciel de streaming » : copiez la <b>clé de stream</b>.'},
+  youtube: {name: 'YouTube', short: '▶', color: '#ff0000', server: 'rtmp://a.rtmp.youtube.com/live2',
+    help: 'YouTube Studio › Créer › Passer au direct › Diffusion : copiez la <b>clé de flux</b>.'},
+  instagram: {name: 'Instagram', short: 'IG', color: '#d62976', server: '',
+    help: 'Instagram › Direct (compte professionnel) : copiez l\'<b>URL du serveur</b> ET la <b>clé de stream</b> — elles changent à chaque direct.'},
+  twitch: {name: 'Twitch', short: 'T', color: '#9146ff', server: 'rtmp://live.twitch.tv/app',
+    help: 'Twitch › Tableau de bord des créateurs › Paramètres › Stream : copiez la <b>clé de stream principale</b>.'},
+  custom: {name: 'Serveur personnalisé', short: '⚙', color: '#5b6370', server: '',
+    help: 'Adresse RTMP / RTMPS complète (Vimeo, Restream, Dailymotion, serveur privé…), et la clé si elle est séparée.'},
+};
+const HEALTH = {good: ['EXCELLENT', 'g'], warn: ['INSTABLE', 'w'], bad: ['MAUVAIS', 'r']};
+const FEED_TXT = {off: 'RÉGIE NON CONFIGURÉE', connecting: 'CONNEXION À LA RÉGIE…', auth: 'CODE REFUSÉ', noregie: 'RÉGIE FERMÉE', waiting: 'RÉGIE CONNECTÉE', live: 'PROGRAMME REÇU', error: 'RÉGIE INJOIGNABLE'};
+
+let S = null, cfg = null, tab = 'dest', logs = [], ws = null, connected = false, pvUrl = null, lastFrame = 0;
+const peaks = [{v: -90, t: 0}, {v: -90, t: 0}];
+
+/* ---------- liaison avec le moteur local ---------- */
+function connect(){
+  ws = new WebSocket(`ws://${location.host}/ui`);
+  ws.binaryType = 'blob';
+  ws.onopen = () => { connected = true; };
+  ws.onmessage = e => {
+    if(typeof e.data !== 'string'){
+      lastFrame = Date.now();
+      const u = URL.createObjectURL(e.data); const img = $('#pv');
+      img.onload = () => { if(pvUrl) URL.revokeObjectURL(pvUrl); pvUrl = u; };
+      img.src = u; return;
+    }
+    let m; try{ m = JSON.parse(e.data); }catch(err){ return; }
+    if(m.type === 'state'){ const first = !S; S = m; if(first || !cfg){ cfg = JSON.parse(JSON.stringify(m.cfg)); renderTab(); } render(); }
+    else if(m.type === 'logs'){ logs = m.lines || []; renderLog(); }
+    else if(m.type === 'log'){ logs.push(m.line); if(logs.length > 300) logs.shift(); renderLog(); }
+  };
+  ws.onclose = () => { connected = false; S = null; render(); setTimeout(connect, 1500); };
+}
+const send = o => { if(ws && ws.readyState === 1) ws.send(JSON.stringify(o)); };
+let saveT;
+function saveCfg(now){ clearTimeout(saveT); const go = () => send({type: 'cfg', cfg}); if(now) go(); else saveT = setTimeout(go, 400); }
+
+/* ---------- rendu ---------- */
+function render(){
+  const now = Date.now();
+  $('#clock').textContent = new Date().toLocaleTimeString('fr-FR');
+  if(!S){
+    $('#chipFeed').className = 'chip bad'; $('#feedLbl').textContent = connected ? 'CHARGEMENT…' : 'MOTEUR DE DIFFUSION ARRÊTÉ'; $('#feedKb').textContent = '';
+    document.title = 'ScènePro Diffusion'; return;
+  }
+  const f = S.feed, st = S.stream, rc = S.rec;
+  const drift = now - S.now; // horloge du moteur = même ordinateur, on compense quand même
+  // liaison régie
+  const fcls = f.status === 'live' ? (f.stalled ? 'wait' : 'ok') : (f.status === 'connecting' || f.status === 'waiting') ? 'wait' : f.status === 'noregie' ? '' : 'bad';
+  $('#chipFeed').className = 'chip ' + fcls;
+  $('#feedLbl').textContent = (FEED_TXT[f.status] || f.status) + (S.cfg.regie.host && f.status !== 'off' ? ' · ' + (/^(127\.0\.0\.1|localhost)$/.test(S.cfg.regie.host) ? 'cet ordinateur' : S.cfg.regie.host) : '');
+  $('#feedKb').textContent = f.status === 'live' ? nf(f.kbps) + ' kb/s' : '';
+  const sig = f.status === 'live' && now - lastFrame < 3000;
+  $('#nosig').style.display = sig ? 'none' : '';
+  $('#nosigSub').textContent = f.status === 'off' ? 'Réglez l\'adresse de la régie dans l\'onglet « Liaison régie ».' : f.status === 'auth' ? 'Code d\'accès refusé : vérifiez-le dans « Liaison régie ».'
+    : f.status === 'noregie' ? 'Le serveur répond mais la régie ScènePro est fermée.' : f.status === 'error' ? (f.err || 'Régie injoignable') + ' — nouvelle tentative…' : f.status === 'live' ? 'Signal reçu, ouverture de l\'aperçu…' : 'En attente du programme…';
+  $('#fmtChip').textContent = f.info ? `${f.info.w}×${f.info.h} · ${f.info.fps} i/s` : '—';
+  const reg = f.regie || {}, route = reg.routage && reg.routage.web ? +String(reg.routage.web).replace(/\D/g, '') : 0;
+  document.querySelectorAll('[data-bus]').forEach(b => { b.classList.toggle('on', +b.dataset.bus === route); b.disabled = !(f.status === 'live' || f.status === 'waiting'); });
+  const pn = route ? reg['pgm' + route] : null;
+  $('#pname').innerHTML = route ? `PGM ${route} : <b>${esc(pn || 'noir')}</b>` : '';
+  $('#ovName').style.display = sig && pn ? '' : 'none'; $('#ovName').textContent = pn || '';
+
+  // diffusion
+  const airOn = st.want, airLive = st.status === 'live';
+  const airT = airOn ? hms(now - drift - st.startedAt) : '00h00m00s';
+  $('#airTc').textContent = airT; $('#airTc').classList.toggle('off', !airOn);
+  $('#blkAir').classList.toggle('live', airLive);
+  $('#btnAir').className = 'big ' + (airLive ? 'on' : airOn ? 'wait' : '');
+  $('#btnAirSub').textContent = airLive ? 'EN DIRECT' : airOn ? (st.status === 'waitfeed' ? 'ATTENTE RÉGIE' : 'CONNEXION…') : 'DÉMARRER';
+  const h = st.health;
+  $('#airSub').innerHTML = airLive ? `<b>EN LIGNE</b> · ${esc(st.dests.join(' · '))}` :
+    st.status === 'connecting' ? 'Connexion aux plateformes…' : st.status === 'reconnecting' ? `<b style="color:var(--amber)">Reconnexion</b> (essai ${st.retry})…` :
+    st.status === 'waitfeed' ? '<b style="color:var(--amber)">En attente du programme de la régie</b>' : st.status === 'error' ? `<b style="color:var(--red)">Erreur</b> · ${esc(st.err)}` :
+    `Hors ligne · ${activeDests().length} plateforme(s) active(s) · ${S.cfg.res}p ${S.cfg.fps} i/s · ${nf(S.cfg.kbps)} kb/s`;
+  $('#tAir').className = 'tally ' + (airLive ? 'air' : airOn ? 'wait' : ''); $('#tAirTc').textContent = airT;
+  $('#ovAir').classList.toggle('on', airLive); $('#ovAirTc').textContent = airT;
+
+  // enregistrement
+  const recOn = rc.want, recT = recOn ? hms(now - drift - rc.startedAt) : '00h00m00s';
+  $('#recTc').textContent = recT; $('#recTc').classList.toggle('off', !recOn);
+  $('#blkRec').classList.toggle('live', rc.status === 'rec');
+  $('#btnRec').className = 'big ' + (rc.status === 'rec' ? 'on' : recOn ? 'wait' : '');
+  $('#recSub').innerHTML = rc.status === 'rec' ? `<b>${esc(baseName(rc.file))}</b> · ${mb(rc.size || 0)}` : rc.status === 'waitfeed' ? '<b style="color:var(--amber)">En attente du programme de la régie</b>' :
+    rc.status === 'error' ? `<b style="color:var(--red)">Erreur</b> · ${esc(rc.err)}` : `Arrêté · ${esc(S.cfg.recDir)}` + (S.free != null ? ` · ${mb(S.free)} libres` : '');
+  $('#tRec').className = 'tally ' + (rc.status === 'rec' ? 'rec' : recOn ? 'wait' : ''); $('#tRecTc').textContent = recT;
+  $('#ovRec').classList.toggle('on', recOn); $('#ovRecTc').textContent = recT;
+  document.body.classList.toggle('recording', rc.status === 'rec');
+
+  // statistiques
+  const s = st.stats, set = (id, v, c) => { const e = $('#' + id); e.textContent = v; e.className = c || ''; };
+  if(airLive && h) set('sHealth', HEALTH[h][0], HEALTH[h][1]); else set('sHealth', airOn ? '…' : '—');
+  set('sKb', airLive ? nf(st.kbps) + ' kb/s' : '—');
+  if(s){ set('sDrop', nf(s.drop), s.drop ? 'r' : 'g'); set('sSpeed', s.speed ? s.speed.toFixed(2) + '×' : '—', s.speed >= .98 ? 'g' : s.speed >= .9 ? 'w' : 'r');
+    set('sFps', s.fps ? s.fps.toFixed(1) : '—'); set('sData', mb(s.totalSize)); }
+  else { set('sDrop', '—'); set('sSpeed', '—'); set('sFps', '—'); set('sData', '—'); }
+  set('sRecSize', rc.status === 'rec' ? mb(rc.size || 0) : '—');
+  drawSpark(st.hist || [], S.cfg.kbps);
+
+  document.title = (rc.status === 'rec' ? '● REC ' + recT + ' — ' : '') + (airLive ? 'ON AIR ' + airT + ' — ' : '') + 'ScènePro Diffusion';
+  if(tab === 'rec') renderRecFiles();
+}
+const baseName = p => String(p || '').split(/[\\/]/).pop();
+const activeDests = () => (cfg ? cfg.dests : S.cfg.dests).filter(d => d.enabled && (d.server || d.key));
+
+function drawSpark(hist, target){
+  const cv = $('#spark'), W = cv.width = cv.clientWidth * devicePixelRatio, H = cv.height = cv.clientHeight * devicePixelRatio, g = cv.getContext('2d');
+  g.clearRect(0, 0, W, H);
+  const max = Math.max(target * 1.4, ...hist, 1), ty = H - target / max * H;
+  g.strokeStyle = 'rgba(142,149,158,.35)'; g.setLineDash([4, 4]); g.beginPath(); g.moveTo(0, ty); g.lineTo(W, ty); g.stroke(); g.setLineDash([]);
+  if(hist.length < 2) return;
+  g.beginPath(); hist.forEach((v, i) => { const x = i / 179 * W, y = H - v / max * H; i ? g.lineTo(x, y) : g.moveTo(x, y); });
+  g.strokeStyle = '#29d16b'; g.lineWidth = 1.5 * devicePixelRatio; g.stroke();
+  g.lineTo((hist.length - 1) / 179 * W, H); g.lineTo(0, H); g.closePath(); g.fillStyle = 'rgba(41,209,107,.12)'; g.fill();
+}
+
+// vumètres (60 i/s, valeurs reçues 2×/s → lissées)
+const lv = [-90, -90];
+function meters(){
+  const now = performance.now();
+  const src = S && S.feed.status === 'live' ? S.levels : [-90, -90];
+  [0, 1].forEach(i => {
+    const target = src[i] == null ? -90 : src[i];
+    lv[i] = target > lv[i] ? target : lv[i] - 0.6; // retombée douce
+    const pct = Math.max(0, Math.min(100, (lv[i] + 60) / 60 * 100));
+    $(i ? '#vuR' : '#vuL').style.height = pct + '%';
+    if(lv[i] >= peaks[i].v || now - peaks[i].t > 1500){ peaks[i] = {v: lv[i], t: now}; }
+    $(i ? '#pkR' : '#pkL').style.bottom = Math.max(0, Math.min(100, (peaks[i].v + 60) / 60 * 100)) + '%';
+  });
+  requestAnimationFrame(meters);
+}
+
+/* ---------- onglets ---------- */
+$('#tabs').onclick = e => { const b = e.target.closest('[data-t]'); if(!b) return; tab = b.dataset.t; document.querySelectorAll('#tabs [data-t]').forEach(x => x.classList.toggle('on', x === b)); renderTab(); };
+function renderTab(){
+  const box = $('#tabbody');
+  if(!cfg){ box.innerHTML = '<p class="hint">Connexion au moteur de diffusion…</p>'; return; }
+  if(tab === 'dest') renderDests(box);
+  else if(tab === 'quality') renderQuality(box);
+  else if(tab === 'rec') renderRec(box);
+  else if(tab === 'link') renderLink(box);
+  else { box.innerHTML = '<div class="logbox" id="log"></div>'; renderLog(); }
+}
+function renderDests(box){
+  const c = cfg;
+  box.innerHTML = `<div class="dests" id="dl"></div>
+    <div style="display:flex;gap:8px;align-items:center;margin-top:10px"><select class="txt" id="newSvc" style="width:230px">${Object.entries(SERVICES).map(([k, s]) => `<option value="${k}">${s.name}</option>`).join('')}</select>
+    <button class="btn primary" id="addDest">＋ Ajouter une plateforme</button>
+    <span class="hint" style="margin:0 0 0 8px">Les clés restent sur <b>cet ordinateur</b> (le poste Diffusion), jamais sur la régie. Plusieurs plateformes peuvent être actives en même temps.</span></div>`;
+  $('#dl').innerHTML = c.dests.length ? c.dests.map(d => { const s = SERVICES[d.service] || SERVICES.custom; return `
+    <div class="dest ${d.enabled ? '' : 'off'}" data-id="${esc(d.id)}">
+      <div class="dest-h"><span class="svc" style="background:${s.color}">${s.short}</span>
+        <input class="txt" data-k="name" value="${esc(d.name)}" style="flex:1">
+        <label class="switch" title="Activer"><input type="checkbox" data-k="enabled" ${d.enabled ? 'checked' : ''}><span></span></label>
+        <button class="ib x" data-del title="Supprimer">✕</button></div>
+      <div class="row2">
+        <div><label class="flabel">Serveur (URL)</label><input class="txt" data-k="server" value="${esc(d.server)}" placeholder="rtmps://…" spellcheck="false"></div>
+        <div><label class="flabel">Clé de stream</label><div class="keyrow"><input class="txt" type="password" data-k="key" value="${esc(d.key)}" placeholder="Collez la clé ici" spellcheck="false" autocomplete="off"><button class="ib" data-show title="Afficher / masquer">👁</button></div></div>
+      </div>
+      <p class="hint">${s.help}</p></div>`; }).join('') : '<p class="hint">Aucune plateforme pour l\'instant : ajoutez Facebook, YouTube, Instagram…</p>';
+  $('#dl').querySelectorAll('.dest').forEach(el => {
+    const d = c.dests.find(x => x.id === el.dataset.id);
+    el.querySelectorAll('[data-k]').forEach(inp => inp.addEventListener(inp.type === 'checkbox' ? 'change' : 'input', () => {
+      d[inp.dataset.k] = inp.type === 'checkbox' ? inp.checked : inp.value;
+      if(inp.type === 'checkbox') el.classList.toggle('off', !inp.checked);
+      saveCfg(inp.type === 'checkbox');
+    }));
+    el.querySelector('[data-show]').onclick = () => { const k = el.querySelector('[data-k=key]'); k.type = k.type === 'password' ? 'text' : 'password'; };
+    el.querySelector('[data-del]').onclick = () => { if(!confirm('Supprimer cette plateforme ?')) return; c.dests = c.dests.filter(x => x !== d); saveCfg(true); renderTab(); };
+  });
+  $('#addDest').onclick = () => { const k = $('#newSvc').value, s = SERVICES[k]; c.dests.push({id: uid(), service: k, name: s.name, server: s.server, key: '', enabled: true}); saveCfg(true); renderTab(); };
+}
+function renderQuality(box){
+  const c = cfg, opt = (v, cur, l) => `<option value="${v}" ${String(v) === String(cur) ? 'selected' : ''}>${l}</option>`;
+  box.innerHTML = `<div class="grid4">
+    <div><label class="flabel">Résolution</label><select class="txt" data-q="res">${opt('480', c.res, '480p — connexion faible')}${opt('720', c.res, '720p — recommandé')}${opt('1080', c.res, '1080p — haute qualité')}</select></div>
+    <div><label class="flabel">Images par seconde</label><select class="txt" data-q="fps">${opt(25, c.fps, '25 i/s')}${opt(30, c.fps, '30 i/s — recommandé')}${opt(50, c.fps, '50 i/s')}${opt(60, c.fps, '60 i/s')}</select></div>
+    <div><label class="flabel">Débit vidéo</label><select class="txt" data-q="kbps">${[1500, 2500, 3500, 4500, 6000, 8000, 10000].map(k => opt(k, c.kbps, nf(k) + ' kb/s' + (k === 4500 ? ' — 720p' : k === 6000 ? ' — 1080p' : ''))).join('')}</select></div>
+    <div><label class="flabel">Débit audio</label><select class="txt" data-q="akbps">${opt(128, c.akbps, '128 kb/s')}${opt(160, c.akbps, '160 kb/s — recommandé')}${opt(192, c.akbps, '192 kb/s')}${opt(256, c.akbps, '256 kb/s')}</select></div>
+    <div><label class="flabel">Charge du processeur</label><select class="txt" data-q="preset">${opt('ultrafast', c.preset, 'Légère (ordinateur modeste)')}${opt('veryfast', c.preset, 'Équilibrée — recommandé')}${opt('faster', c.preset, 'Meilleure image')}${opt('fast', c.preset, 'Haute qualité (processeur puissant)')}</select></div>
+    <div><label class="flabel">Connexion Internet nécessaire</label><div class="txt" style="display:flex;align-items:center" id="qNeed"></div></div>
+  </div>
+  <p class="hint">Facebook recommande 720p / 4 500 kb/s ; YouTube accepte 1080p / 6 000 kb/s. Prévoyez un débit montant (upload) d'au moins 1,5 fois le total. La résolution et les images/s sont aussi demandées à la régie ; les autres changements s'appliquent au prochain démarrage.</p>`;
+  const need = () => { const n = Math.max(1, activeDests().length); $('#qNeed').innerHTML = `<b>${((c.kbps + c.akbps) * 1.5 * n / 1000).toFixed(1)}</b>&nbsp;Mb/s en upload (${n} plateforme${n > 1 ? 's' : ''})`; };
+  need();
+  box.querySelectorAll('[data-q]').forEach(s => s.onchange = () => { const k = s.dataset.q; c[k] = (k === 'res' || k === 'preset') ? s.value : +s.value; saveCfg(true); need(); });
+}
+function renderRec(box){
+  const c = cfg, opt = (v, cur, l) => `<option value="${v}" ${String(v) === String(cur) ? 'selected' : ''}>${l}</option>`;
+  box.innerHTML = `<div class="grid3" style="max-width:1000px">
+    <div style="grid-column:span 2"><label class="flabel">Dossier des enregistrements</label><div class="keyrow"><input class="txt" id="rDir" value="${esc(c.recDir)}" spellcheck="false"><button class="btn" id="rOpen">Ouvrir le dossier</button></div></div>
+    <div><label class="flabel">Qualité du fichier</label><select class="txt" id="rKb">${[[6000, 'Standard (6 Mb/s)'], [12000, 'Haute (12 Mb/s) — recommandé'], [20000, 'Très haute (20 Mb/s)'], [35000, 'Maximum (35 Mb/s)']].map(([v, l]) => opt(v, c.rkbps, l)).join('')}</select></div>
+  </div>
+  <p class="hint">Fichier <b>MP4</b> (H.264 + AAC) à la résolution choisie dans « Qualité ». L'enregistrement est indépendant de la diffusion : il fonctionne même sans Internet. Si la régie est coupée pendant l'enregistrement, il reprend tout seul dans un nouveau fichier « _partie2 ».</p>
+  <div class="files" id="rFiles"></div>`;
+  $('#rDir').onchange = () => { c.recDir = $('#rDir').value.trim(); saveCfg(true); };
+  $('#rOpen').onclick = () => send({type: 'openRec'});
+  $('#rKb').onchange = () => { c.rkbps = +$('#rKb').value; saveCfg(true); };
+  renderRecFiles();
+}
+function renderRecFiles(){
+  const el = $('#rFiles'); if(!el || !S) return;
+  const f = S.rec.files || [];
+  el.innerHTML = f.length ? 'Fichiers de cette séance :<br>' + f.map(esc).join('<br>') : '';
+}
+function renderLink(box){
+  const r = cfg.regie;
+  box.innerHTML = `<div class="conn">
+    <div><label class="flabel">Adresse de l'ordinateur régie</label><input class="txt" id="lHost" value="${esc(r.host)}" placeholder="ex. 192.168.1.20" spellcheck="false"></div>
+    <div><label class="flabel">Port</label><input class="txt" id="lPort" value="${esc(r.port)}" inputmode="numeric"></div>
+    <div><label class="flabel">Code d'accès (6 chiffres)</label><input class="txt" id="lCode" value="${esc(r.code)}" inputmode="numeric" maxlength="6" placeholder="••••••"></div>
+    <div style="display:flex;gap:6px"><button class="btn primary" id="lSave">Se connecter</button><button class="btn" id="lLocal" title="La régie tourne sur ce même ordinateur">Cet ordinateur</button></div>
+  </div>
+  <p class="hint">L'adresse et le code s'affichent dans la régie, menu <b>Aide › Accès réseau</b> (les mêmes que pour le poste Synthé). Les deux ordinateurs doivent être sur le même réseau ; un câble Ethernet est conseillé. La régie envoie le programme du bus <b>WEB</b> (image + son du master WEB) ; tout l'encodage et l'envoi vers Internet se font ici.</p>
+  <div id="lState" class="hint"></div>`;
+  const apply = () => { cfg.regie = {host: $('#lHost').value.trim(), port: +$('#lPort').value || 7350, code: $('#lCode').value.replace(/\D/g, '').slice(0, 6)}; saveCfg(true); toast('Connexion à la régie…'); };
+  $('#lSave').onclick = apply;
+  $('#lLocal').onclick = () => { $('#lHost').value = '127.0.0.1'; $('#lCode').value = ''; apply(); };
+  box.querySelectorAll('input').forEach(i => i.addEventListener('keydown', e => { if(e.key === 'Enter') apply(); }));
+}
+function renderLog(){
+  const lg = $('#log'); if(!lg) return;
+  const atEnd = lg.scrollTop + lg.clientHeight >= lg.scrollHeight - 4;
+  lg.textContent = logs.join('\n') || 'Aucun message.';
+  if(atEnd) lg.scrollTop = lg.scrollHeight;
+}
+
+/* ---------- commandes ---------- */
+function toggleAir(){
+  if(!S) return;
+  if(S.stream.want){ if(confirm('Arrêter la diffusion en ligne ?')) send({type: 'stream', on: false}); }
+  else {
+    if(!activeDests().length){ toast('Ajoutez au moins une plateforme active (serveur + clé de stream).'); tab = 'dest'; document.querySelectorAll('#tabs [data-t]').forEach(x => x.classList.toggle('on', x.dataset.t === 'dest')); renderTab(); return; }
+    saveCfg(true); send({type: 'stream', on: true});
+  }
+}
+function toggleRec(){
+  if(!S) return;
+  if(S.rec.want){ if(confirm('Arrêter l\'enregistrement ?')) send({type: 'rec', on: false}); }
+  else send({type: 'rec', on: true});
+}
+$('#btnAir').onclick = toggleAir;
+$('#btnRec').onclick = toggleRec;
+document.querySelectorAll('[data-bus]').forEach(b => b.onclick = () => send({type: 'route', bus: +b.dataset.bus}));
+document.addEventListener('keydown', e => {
+  if(e.ctrlKey && e.code === 'Space'){ e.preventDefault(); toggleAir(); }
+  else if(e.ctrlKey && (e.key === 'r' || e.key === 'R')){ e.preventDefault(); toggleRec(); }
+});
+window.addEventListener('beforeunload', e => { if(S && (S.stream.want || S.rec.want)){ e.preventDefault(); e.returnValue = ''; } });
+let toastT;
+function toast(msg){ const t = $('#toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('on'), 3800); }
+
+setInterval(render, 250);
+requestAnimationFrame(meters);
+connect();
+renderTab();
+</script>
+</body>
+</html>

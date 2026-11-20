@@ -1,0 +1,2739 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ScènePro — Régie vidéo</title>
+<link rel="icon" href="/logo-regie.png">
+<style>
+:root{
+  --bg:#0a0c0f;--panel:#12151a;--panel2:#171b21;--panel3:#1f242c;--line:#262c35;--line2:#343c48;
+  --text:#e7eaee;--muted:#8b93a0;--dim:#5b6370;
+  --green:#1fd16b;--green-bg:rgba(31,209,107,.12);--red:#ff3b3b;--red-bg:rgba(255,59,59,.12);
+  --amber:#ffb020;--accent:#3d8bff;
+  --mono:"Cascadia Mono","Consolas","SF Mono",ui-monospace,monospace;
+  --hdr:46px;--lowMin:250px;--mvH:100px;
+}
+@media (max-height:860px){:root{--lowMin:200px;--mvH:86px}}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);
+  font:13px/1.35 "Segoe UI Variable Text","Segoe UI",system-ui,sans-serif;overflow:hidden;user-select:none;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;cursor:pointer}
+input,select{font:inherit;color:inherit}
+svg{width:16px;height:16px;fill:currentColor;display:block;flex:none}
+.app{display:grid;grid-template-rows:var(--hdr) auto auto minmax(var(--lowMin),1fr);height:100vh}
+
+/* ---------- Header + menus ---------- */
+header{display:flex;align-items:center;gap:10px;padding:0 12px;background:#0d1014;border-bottom:1px solid var(--line);position:relative;z-index:60}
+.brand{display:flex;align-items:center;gap:9px;font-weight:700;letter-spacing:.3px;font-size:15px;margin-right:6px}
+.brand .mark{width:22px;height:22px;border-radius:6px;background:linear-gradient(135deg,var(--red),#b0161f);display:grid;place-items:center;box-shadow:0 0 12px rgba(255,59,59,.35)}
+.brand .mark i{width:8px;height:8px;border-radius:50%;background:#fff}
+.menubar{display:flex;gap:2px}
+.menubar>button{height:30px;padding:0 11px;border-radius:6px;border:0;background:transparent;color:#c9cfd6;font-size:13px}
+.menubar>button:hover,.menubar>button.open{background:var(--panel3);color:#fff}
+.dropdown{position:fixed;z-index:90;min-width:270px;background:#181c22;border:1px solid var(--line2);border-radius:9px;padding:5px;box-shadow:0 16px 40px rgba(0,0,0,.55);display:none}
+.dropdown.on{display:block}
+.dd-item{display:flex;align-items:center;gap:10px;width:100%;height:32px;padding:0 10px;border:0;border-radius:6px;background:transparent;text-align:left;color:#dfe3e8;font-size:13px}
+.dd-item:hover:not(:disabled){background:var(--accent);color:#fff}
+.dd-item:disabled{color:var(--dim);cursor:default}
+.dd-item .ck{width:16px;display:grid;place-items:center;color:var(--accent)}
+.dd-item:hover .ck{color:#fff}
+.dd-item .lb{flex:1;white-space:nowrap}
+.dd-item .kb{font-family:var(--mono);font-size:11px;color:var(--dim)}
+.dd-item:hover .kb{color:#dce8ff}
+.dd-item.danger{color:#ff9d9d}
+.dd-item.live{color:#ff8a8a;font-weight:600}
+.dd-sep{height:1px;background:var(--line);margin:5px 4px}
+.dd-head{font-size:10px;letter-spacing:1.3px;font-weight:700;color:var(--dim);padding:6px 10px 3px;text-transform:uppercase}
+.showname{padding:4px 10px;border-radius:6px;background:var(--panel2);border:1px solid var(--line);color:var(--muted);max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-left:6px}
+.showname b{color:var(--text);font-weight:600}
+.spacer{flex:1}
+.status{display:flex;gap:6px}
+.spill{display:flex;align-items:center;gap:7px;height:28px;padding:0 10px;border-radius:6px;background:var(--panel2);border:1px solid var(--line);color:var(--muted);font-size:11px;font-weight:700;letter-spacing:1px;white-space:nowrap}
+.spill:hover{border-color:var(--line2);color:#fff}
+.spill .led{width:8px;height:8px;border-radius:50%;background:var(--dim);flex:none}
+.spill.on{color:#fff;border-color:rgba(255,59,59,.55);background:var(--red-bg)}
+.spill.on .led{background:var(--red);box-shadow:0 0 8px var(--red)}
+.spill .kb{font-family:var(--mono);font-weight:500;letter-spacing:0;color:#cfd5dc}
+.spill.lv-good .led{background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse 1.6s infinite}
+.spill.lv-warn .led{background:var(--amber);box-shadow:0 0 8px var(--amber);animation:pulse 1s infinite}
+.spill.lv-bad .led{background:var(--red);box-shadow:0 0 8px var(--red);animation:blink .6s infinite}
+.spill.lv-good,.spill.lv-warn,.spill.lv-bad{color:#fff;border-color:rgba(255,59,59,.55);background:var(--red-bg)}
+.spill.lv-wait .led{background:var(--amber);animation:blink .8s infinite}
+.spill.lv-err{color:#ffb3b3;border-color:rgba(255,59,59,.55)}
+.spill.lv-err .led{background:var(--red)}
+.spill.lv-ready .led{background:var(--green)}
+.spill.lv-lost{color:var(--amber);border-color:rgba(255,176,32,.6);background:rgba(255,176,32,.1)}
+.spill.lv-lost .led{background:var(--amber);animation:blink .8s infinite}
+.spill.rec-on{color:#fff;border-color:var(--red);background:var(--red)}
+.spill.rec-on .led{background:#fff;animation:blink 1s infinite}
+.spill.rec-on .kb{color:#fff}
+.clock{font-family:var(--mono);font-size:17px;letter-spacing:1px;color:#cfd5dc;padding-left:6px;min-width:92px;text-align:right}
+@keyframes pulse{50%{opacity:.35}}
+@keyframes blink{50%{opacity:.25}}
+
+/* ---------- Monitors ---------- */
+.monitors{display:grid;grid-template-columns:minmax(0,1fr) 132px minmax(0,1fr);gap:10px;padding:10px 10px 0}
+.mon{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:9px 10px 10px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.mon-head{display:flex;align-items:center;gap:8px;min-width:0;height:22px}
+.tag{font-size:11px;font-weight:800;letter-spacing:1.4px;padding:3px 9px;border-radius:4px;flex:none}
+.pvw .tag{background:var(--green);color:#03250f}
+.pgm .tag{background:var(--red);color:#fff}
+.mon-title{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#d9dee4;min-width:0}
+.onair{margin-left:auto;font-size:10.5px;font-weight:800;letter-spacing:1.5px;padding:3px 8px;border-radius:4px;border:1px solid var(--line2);color:var(--dim);flex:none}
+.onair.live{border-color:var(--red);color:#fff;background:var(--red);animation:pulse 1.8s infinite}
+.chip{font-size:10.5px;font-weight:700;letter-spacing:1px;padding:3px 7px;border-radius:4px;background:var(--panel3);color:var(--muted);flex:none}
+.chip.red{background:var(--red);color:#fff}
+.pvw .chip{margin-left:auto}
+.screen-wrap{display:flex;justify-content:center}
+.screen{position:relative;width:min(100%, calc((100vh - var(--hdr) - var(--lowMin) - var(--mvH) - 142px) * 16 / 9));aspect-ratio:16/9;background:#000;border-radius:4px;overflow:hidden}
+.pvw .screen{outline:3px solid var(--green);box-shadow:0 0 0 6px rgba(31,209,107,.08),0 0 28px rgba(31,209,107,.12)}
+.pgm .screen{outline:3px solid var(--red);box-shadow:0 0 0 6px rgba(255,59,59,.08),0 0 28px rgba(255,59,59,.14)}
+.empty{position:absolute;inset:0;display:grid;place-items:center;color:#3c434d;font-size:12px;letter-spacing:2px;font-weight:700;pointer-events:none;z-index:0}
+.blackbadge{position:absolute;top:8px;right:8px;z-index:20;font-size:10px;font-weight:800;letter-spacing:1.5px;background:#000;border:1px solid var(--amber);color:var(--amber);padding:2px 7px;border-radius:3px;display:none;animation:blink 1s infinite}
+.blackbadge.on{display:block}
+.outs-badge{position:absolute;left:8px;top:8px;z-index:20;display:flex;gap:4px}
+.outs-badge span{font-size:9.5px;font-weight:800;letter-spacing:1px;background:rgba(0,0,0,.7);border:1px solid var(--red);color:#fff;padding:1px 6px;border-radius:3px}
+
+/* stage (shared with output windows) */
+.stage{position:absolute;inset:0;overflow:hidden;z-index:1}
+.layer{position:absolute;inset:0}
+.layer video,.layer img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:block}
+.stage-black{position:absolute;inset:0;background:#000;opacity:0;pointer-events:none;z-index:10}
+.pip{position:absolute;z-index:5;aspect-ratio:16/9;overflow:hidden;background:#000;outline:2px solid rgba(255,255,255,.9);box-shadow:0 4px 18px rgba(0,0,0,.6);pointer-events:none}
+.pip.noborder{outline:0;box-shadow:none}
+.pip video,.pip img{width:100%;height:100%;object-fit:cover;display:block}
+
+.mon-foot{display:flex;align-items:center;gap:8px;height:34px}
+.tbtn-s{width:32px;height:30px;display:grid;place-items:center;border-radius:6px;background:var(--panel2);border:1px solid var(--line);color:#cfd5dc;flex:none}
+.tbtn-s:hover{background:var(--panel3);border-color:var(--line2)}
+.tbtn-s.on{color:var(--amber);border-color:rgba(255,176,32,.5)}
+.tc{font-family:var(--mono);font-size:12.5px;color:#b9c0c9;white-space:nowrap;flex:none}
+.tc.big{font-size:22px;color:#fff;letter-spacing:.5px;min-width:96px;text-align:right}
+.tc.big.warn{color:var(--amber)}
+.tc.big.crit{color:var(--red);animation:blink .8s infinite}
+input[type=range]{-webkit-appearance:none;appearance:none;background:transparent;height:20px;margin:0;cursor:pointer}
+input[type=range]::-webkit-slider-runnable-track{height:4px;border-radius:2px;background:var(--line2)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:#e7eaee;margin-top:-4px;border:0}
+.scrub{flex:1;min-width:40px}
+.bar{flex:1;height:6px;border-radius:3px;background:var(--line);overflow:hidden;min-width:40px}
+.bar i{display:block;height:100%;width:0;background:var(--red);border-radius:3px}
+.vol{width:80px;flex:none}
+.vu{display:flex;flex-direction:column;gap:2px;width:84px;flex:none;cursor:pointer}
+.vu span{display:block;height:5px;border-radius:2px;background:linear-gradient(90deg,#1fd16b 0 68%,#ffb020 68% 88%,#ff3b3b 88%);position:relative;overflow:hidden}
+.vu span i{position:absolute;top:0;right:0;bottom:0;width:100%;background:#20252d}
+.upnext{font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.upnext b{color:#cfd5dc;font-weight:600}
+
+/* ---------- Multiview : 3 bus programme + routage ---------- */
+.multiview{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;padding:10px 10px 0}
+.mvc{display:flex;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:7px;cursor:pointer;min-width:0;height:var(--mvH);transition:border-color .12s}
+.mvc:hover{border-color:#4a5462}
+.mvc.sel{border-color:var(--red);box-shadow:inset 0 0 0 1px var(--red);background:linear-gradient(90deg,rgba(255,59,59,.07),var(--panel) 60%)}
+.mvs{position:relative;height:100%;aspect-ratio:16/9;background:#000;border-radius:4px;overflow:hidden;flex:none;outline:2px solid #2a3039}
+.mvc.air .mvs{outline-color:var(--red)}
+.mvs .empty{font-size:9px;letter-spacing:1.5px}
+.mvs .mvblk{position:absolute;right:4px;top:4px;z-index:20;font-size:8.5px;font-weight:800;letter-spacing:1px;color:var(--amber);border:1px solid var(--amber);background:#000;padding:0 4px;border-radius:2px;display:none}
+.mvs .mvblk.on{display:block;animation:blink 1s infinite}
+.mvi{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:space-between;gap:3px}
+.mvh{display:flex;align-items:center;gap:6px}
+.mvtag{font-size:11px;font-weight:800;letter-spacing:1.3px;padding:2px 7px;border-radius:4px;background:var(--panel3);color:#cfd5dc}
+.mvc.sel .mvtag{background:var(--red);color:#fff}
+.mvkey{font-family:var(--mono);font-size:10px;color:var(--dim);margin-left:auto}
+.mvpip{height:18px;padding:0 6px;border-radius:4px;border:1px solid var(--line2);background:var(--panel2);color:var(--muted);font-size:9.5px;font-weight:800;letter-spacing:.8px}
+.mvpip:hover{border-color:var(--accent);color:#fff}
+.mvpip.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.mvrec.none{opacity:.45}
+.mvrec.on{background:var(--red);border-color:var(--red);color:#fff;animation:pulse 1.4s infinite}
+.mvrec.wait{border-color:var(--amber);color:var(--amber)}
+.mvair{width:7px;height:7px;border-radius:50%;background:var(--dim)}
+.mvc.air .mvair{background:var(--red);box-shadow:0 0 6px var(--red);animation:pulse 1.6s infinite}
+.mvt{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#d9dee4}
+.mvtime{font-family:var(--mono);font-size:11.5px;color:var(--muted)}
+.mvr{display:flex;gap:4px}
+.mvr button{flex:1;height:22px;padding:0;border-radius:4px;border:1px solid var(--line2);background:var(--panel2);color:var(--muted);font-size:10.5px;font-weight:800;letter-spacing:.8px}
+.mvr button:hover{border-color:var(--red);color:#fff}
+.mvr button.on{background:var(--red);border-color:var(--red);color:#fff}
+.mvr button.on.off{background:rgba(255,59,59,.25);border-color:rgba(255,59,59,.5);color:#ffb3b3}
+.mvr .b-ret{flex:1.6}
+.mvr .b-ret.on{background:var(--amber);border-color:var(--amber);color:#1a1200}
+@media (max-height:860px){.mvtime{display:none}}
+
+/* ---------- Transition bar ---------- */
+.tbar{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 9px;display:flex;flex-direction:column;gap:8px;align-items:stretch;justify-content:center}
+.tb-label{font-size:10px;letter-spacing:1.5px;color:var(--dim);font-weight:700;text-align:center}
+.tbtn{position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;height:54px;border-radius:8px;border:1px solid var(--line2);background:linear-gradient(#232932,#1a1f26);color:#fff;transition:transform .05s}
+.tbtn:active{transform:scale(.97)}
+.tbtn b{font-size:15px;letter-spacing:1.5px;position:relative;z-index:1}
+.tbtn small{font-size:10px;color:var(--muted);position:relative;z-index:1}
+.tbtn:hover{border-color:#4a5462}
+.tbtn.auto{border-color:rgba(255,59,59,.55);background:linear-gradient(#3a1416,#251012)}
+.tbtn.auto:hover{border-color:var(--red)}
+.tbtn.auto .prog{position:absolute;left:0;bottom:0;top:0;width:0;background:rgba(255,59,59,.35);z-index:0}
+.tbtn.next{border-color:rgba(61,139,255,.5);background:linear-gradient(#142640,#101c2e)}
+.tbtn.next:hover{border-color:var(--accent)}
+.tbtn.ftb.on{background:var(--amber);border-color:var(--amber);color:#1a1200;animation:blink 1s infinite}
+.tbtn.ftb.on small{color:#3a2a00}
+.rate{display:grid;grid-template-columns:repeat(4,1fr);gap:3px}
+.rate button{height:24px;border-radius:5px;border:1px solid var(--line);background:var(--panel2);font-size:11px;color:var(--muted);padding:0}
+.rate button.on{background:#e7eaee;color:#111;border-color:#e7eaee;font-weight:700}
+.tb-sep{height:1px;background:var(--line);margin:2px 0}
+
+/* ---------- Lower ---------- */
+.lower{display:grid;grid-template-columns:minmax(0,1fr) 350px;gap:10px;padding:10px;min-height:0}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;display:flex;flex-direction:column;min-height:0;min-width:0}
+.ph{display:flex;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px solid var(--line);height:44px;flex:none}
+.ph h2{margin:0;font-size:12px;letter-spacing:1.4px;font-weight:700;color:#cfd5dc;text-transform:uppercase;white-space:nowrap}
+.ph .count{font-size:11px;color:var(--muted);background:var(--panel3);padding:1px 7px;border-radius:9px}
+.btn{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 11px;border-radius:6px;background:var(--panel2);border:1px solid var(--line);color:var(--text);font-size:12.5px;white-space:nowrap}
+.btn:hover{background:var(--panel3);border-color:var(--line2)}
+.btn:disabled{opacity:.45;cursor:default}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+.btn.primary:hover{filter:brightness(1.1)}
+.btn.danger:hover{border-color:var(--red);color:#ffb3b3}
+.btn.red{background:var(--red);border-color:var(--red);color:#fff;font-weight:600}
+.btn.block{width:100%;justify-content:center;height:36px}
+.btn.sm{height:26px;padding:0 8px}
+
+.bin{flex:1;overflow:auto;padding:12px;position:relative}
+.bin.drag{background:rgba(61,139,255,.06);outline:2px dashed var(--accent);outline-offset:-8px;border-radius:10px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:12px}
+.card{background:var(--panel2);border:1px solid var(--line);border-radius:8px;overflow:hidden;cursor:pointer;position:relative;transition:border-color .12s}
+.card:hover{border-color:#4a5462}
+.card.pvw{border-color:var(--green);box-shadow:0 0 0 1px var(--green)}
+.card.pgm{border-color:var(--red);box-shadow:0 0 0 1px var(--red)}
+.card.dragging{opacity:.35}
+.card.ins-before::before,.card.ins-after::after{content:"";position:absolute;top:0;bottom:0;width:3px;background:var(--accent);z-index:5}
+.card.ins-before::before{left:0}.card.ins-after::after{right:0}
+.thumb{position:relative;aspect-ratio:16/9;background:#000;overflow:hidden}
+.thumb img{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none}
+.thumb .ph-ic{position:absolute;inset:0;display:grid;place-items:center;color:#3c434d}
+.thumb .ph-ic svg{width:30px;height:30px}
+.idx{position:absolute;top:5px;left:5px;font-family:var(--mono);font-size:11px;font-weight:700;background:rgba(0,0,0,.72);padding:1px 6px;border-radius:3px}
+.st{position:absolute;top:5px;right:5px;font-size:9.5px;font-weight:800;letter-spacing:1px;padding:2px 6px;border-radius:3px;display:none}
+.card.pvw .st.s-pvw{display:block;background:var(--green);color:#03250f}
+.card .st.s-pvw{left:36px;right:auto}
+.onb{position:absolute;top:5px;right:5px;display:flex;gap:3px}
+.onb span{font-size:9.5px;font-weight:800;letter-spacing:.5px;padding:2px 5px;border-radius:3px;background:rgba(255,59,59,.35);color:#fff}
+.onb span.sel{background:var(--red)}
+.dur{position:absolute;bottom:5px;right:5px;font-family:var(--mono);font-size:11px;background:rgba(0,0,0,.72);padding:1px 6px;border-radius:3px}
+.dur.livebadge{background:var(--red);color:#fff;font-family:inherit;font-weight:800;letter-spacing:1px;font-size:10px}
+.flags{position:absolute;bottom:5px;left:5px;display:flex;gap:3px}
+.flags span{background:rgba(0,0,0,.72);border-radius:3px;padding:2px 3px}
+.flags svg{width:12px;height:12px}
+.flags .f-loop{color:#7fb6ff}.flags .f-mute{color:#ff9d9d}.flags .f-next{color:#9ef0bf}.flags .f-black{color:var(--amber)}
+.cap{display:flex;align-items:center;gap:6px;padding:6px 6px 6px 8px;min-width:0}
+.cap .ti{color:var(--muted)}
+.cap .ti svg{width:14px;height:14px}
+.cap .nm{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12.5px}
+.cap .del{width:22px;height:22px;border-radius:4px;border:0;background:transparent;color:var(--dim);display:grid;place-items:center;opacity:0}
+.card:hover .cap .del{opacity:1}
+.cap .del:hover{background:var(--red-bg);color:var(--red)}
+.card.locked .thumb::after{content:"";position:absolute;inset:0;background:rgba(10,12,15,.72)}
+.card .lockic{position:absolute;inset:0;display:none;place-items:center;z-index:2;color:var(--amber);font-size:11px;text-align:center}
+.card.locked .lockic{display:grid}
+.card .lockic svg{width:22px;height:22px;margin:0 auto 4px}
+.card.missing .lockic{color:var(--red)}
+.dropzone{position:absolute;inset:12px;border:2px dashed var(--line2);border-radius:10px;display:grid;place-items:center;text-align:center;color:var(--muted)}
+.dropzone b{display:block;color:var(--text);font-size:15px;margin-bottom:6px}
+.dropzone svg{width:40px;height:40px;margin:0 auto 10px;color:var(--dim)}
+.banner{display:flex;align-items:center;gap:10px;margin:0 0 12px;padding:9px 12px;border-radius:8px;background:rgba(255,176,32,.1);border:1px solid rgba(255,176,32,.35);color:#ffd27a}
+.banner svg{color:var(--amber)}
+.banner .grow{flex:1}
+
+/* onglets du panneau bas + table de mixage */
+.ltabs{display:flex;gap:2px;height:100%;align-items:stretch}
+.ltabs button{border:0;background:transparent;color:var(--muted);font-size:12px;letter-spacing:1.3px;font-weight:700;text-transform:uppercase;padding:0 10px;border-radius:6px;display:flex;align-items:center;gap:6px;white-space:nowrap}
+.ltabs button:hover{color:#fff;background:var(--panel2)}
+.ltabs button.on{color:#fff;background:var(--panel3)}
+.mixer{flex:1;overflow:auto;padding:10px 12px}
+.strips{display:flex;gap:8px;height:100%;min-height:200px;align-items:stretch}
+.strip{width:92px;flex:none;background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:8px 6px;display:flex;flex-direction:column;align-items:center;gap:5px}
+.strip.master{background:linear-gradient(#1d1416,var(--panel2));border-color:rgba(255,59,59,.35);width:104px}
+.strip.k-live{border-color:rgba(255,59,59,.25)}
+.strip.k-input{border-color:rgba(61,139,255,.3)}
+.strip-sep{width:1px;background:var(--line2);margin:4px 4px;flex:none}
+.sname{font-size:11.5px;font-weight:700;width:100%;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.skind{font-size:8.5px;letter-spacing:1px;font-weight:700;color:var(--dim);white-space:nowrap}
+.strip.master .skind{color:#ff8a8a}
+.sfader{flex:1;display:flex;gap:6px;align-items:stretch;min-height:70px;width:100%;justify-content:center}
+.meters{display:flex;gap:2px}
+.meter{width:7px;border-radius:2px;background:linear-gradient(0deg,#1fd16b 0 68%,#ffb020 68% 88%,#ff3b3b 88%);position:relative;overflow:hidden}
+.meter i{position:absolute;left:0;right:0;top:0;height:100%;background:#0d1014}
+.meter.clip{box-shadow:0 0 0 1px var(--red)}
+.fader{writing-mode:vertical-lr;direction:rtl;width:22px;height:auto;flex:none}
+.fader::-webkit-slider-runnable-track{width:4px;height:auto !important}
+.fader::-webkit-slider-thumb{width:20px !important;height:10px !important;border-radius:2px !important;background:linear-gradient(#e7eaee,#9aa3ae) !important;margin-left:-8px !important;margin-top:0 !important}
+.sdb{font-family:var(--mono);font-size:11px;color:#cfd5dc}
+.sbtns{display:flex;flex-wrap:wrap;gap:3px;justify-content:center;width:100%}
+.sbtns button{flex:1 1 40%;height:22px;border-radius:4px;border:1px solid var(--line2);background:var(--panel);color:var(--muted);font-size:9.5px;font-weight:800;letter-spacing:.6px;padding:0}
+.sbtns .b-mute{flex-basis:100%}
+.sbtns .b-mute.on{background:var(--red);border-color:var(--red);color:#fff}
+.sbtns .b-route.on{background:rgba(31,209,107,.18);border-color:rgba(31,209,107,.6);color:#9ef0bf}
+.sbtns .b-afv.on{background:rgba(255,176,32,.18);border-color:rgba(255,176,32,.6);color:#ffd27a}
+.sbtns .b-del:hover{border-color:var(--red);color:var(--red)}
+
+/* inspector */
+.insp{flex:1;overflow:auto;padding:14px}
+.insp .nothing{color:var(--muted);text-align:center;padding:24px 10px}
+.insp .nothing svg{width:34px;height:34px;margin:0 auto 10px;color:var(--dim)}
+.field{margin-bottom:14px}
+.field>label,.flabel{display:block;font-size:10.5px;letter-spacing:1.2px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:6px}
+.txt{width:100%;height:32px;padding:0 10px;border-radius:6px;background:var(--bg);border:1px solid var(--line2);outline:none}
+.txt:focus{border-color:var(--accent)}
+select.txt{padding:0 6px}
+select.txt option{background:#181c22}
+.num{width:76px;text-align:center}
+.meta{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+.meta span{font-size:11px;background:var(--panel3);color:#c3c9d1;padding:2px 8px;border-radius:4px;font-family:var(--mono)}
+.row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;border-top:1px solid var(--line)}
+.row .l{display:flex;align-items:center;gap:8px}
+.row .l svg{color:var(--muted)}
+.row .l small{display:block;color:var(--dim);font-size:11px}
+.switch{position:relative;width:38px;height:22px;flex:none}
+.switch input{opacity:0;width:0;height:0;position:absolute}
+.switch span{position:absolute;inset:0;border-radius:11px;background:var(--line2);transition:.15s;cursor:pointer}
+.switch span::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#cfd5dc;transition:.15s}
+.switch input:checked+span{background:var(--accent)}
+.switch input:checked+span::after{transform:translateX(16px);background:#fff}
+.seg{display:flex;background:var(--bg);border:1px solid var(--line2);border-radius:7px;padding:2px;gap:2px}
+.seg button{flex:1;height:28px;border:0;border-radius:5px;background:transparent;color:var(--muted);font-size:12px;padding:0 6px;white-space:nowrap}
+.seg button.on{background:var(--panel3);color:#fff;box-shadow:inset 0 0 0 1px var(--line2)}
+.hint{font-size:11.5px;color:var(--dim);margin-top:6px;line-height:1.45}
+.btnrow{display:flex;gap:8px;margin-top:6px}
+.btnrow .btn{flex:1;justify-content:center}
+kbd{font-family:var(--mono);font-size:11px;background:var(--panel3);border:1px solid var(--line2);border-bottom-width:2px;border-radius:4px;padding:0 5px;color:#dfe3e8}
+.keys{display:grid;grid-template-columns:auto 1fr;gap:7px 12px;text-align:left;font-size:12px;margin-top:14px;color:#c3c9d1}
+
+/* modal + toast */
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:100;backdrop-filter:blur(3px)}
+.modal.on{display:flex}
+.dlg{width:min(560px,calc(100vw - 32px));max-height:calc(100vh - 60px);display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line2);border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,.6)}
+.dlg.wide{width:min(860px,calc(100vw - 32px))}
+.dlg-h{display:flex;align-items:center;padding:14px 16px;border-bottom:1px solid var(--line);flex:none}
+.dlg-h h3{margin:0;font-size:15px;flex:1}
+.dlg-b{padding:16px;overflow:auto}
+.xbtn{width:28px;height:28px;border-radius:6px;border:0;background:transparent;color:var(--muted);display:grid;place-items:center}
+.xbtn:hover{background:var(--panel3);color:#fff}
+.screens{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.scr{border:1px solid var(--line2);background:var(--panel2);border-radius:9px;padding:14px 10px;text-align:center;cursor:pointer}
+.scr:hover{border-color:var(--red);background:var(--red-bg)}
+.scr .ic{width:56px;height:36px;margin:0 auto 10px;border:2px solid #6b7480;border-radius:3px}
+.scr.rec .ic{border-color:var(--red)}
+.scr b{display:block;font-size:13px}
+.scr small{display:block;color:var(--muted);font-size:11.5px;margin-top:3px}
+.scr .pill{display:inline-block;margin-top:7px;font-size:10px;font-weight:700;letter-spacing:.8px;padding:2px 6px;border-radius:3px;background:var(--panel3);color:var(--muted)}
+.scr.rec .pill{background:var(--red);color:#fff}
+.info{font-size:12.5px;color:var(--muted);line-height:1.55;margin:0 0 14px}
+.info b{color:var(--text)}
+.warnbox{padding:10px 12px;border-radius:8px;background:rgba(255,176,32,.1);border:1px solid rgba(255,176,32,.35);color:#ffd27a;font-size:12.5px;line-height:1.5;margin-bottom:14px}
+.shows{display:flex;flex-direction:column;gap:6px;margin-top:12px}
+.showrow{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:7px;background:var(--panel2);border:1px solid var(--line)}
+.showrow .n{flex:1;min-width:0}
+.showrow .n b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.showrow .n small{color:var(--muted)}
+.tabs{display:flex;gap:4px;margin:-4px 0 16px;border-bottom:1px solid var(--line)}
+.tabs button{height:34px;padding:0 14px;border:0;background:transparent;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px;font-weight:600}
+.tabs button.on{color:#fff;border-bottom-color:var(--red)}
+.form2{display:grid;grid-template-columns:1fr 1fr;gap:12px 14px}
+.livebar{display:flex;align-items:center;gap:12px;padding:12px;border-radius:10px;background:var(--panel2);border:1px solid var(--line2);margin-bottom:16px}
+.livebar .st-txt{flex:1}
+.livebar .st-txt b{display:block;font-size:15px}
+.livebar .st-txt small{color:var(--muted)}
+.bigdot{width:14px;height:14px;border-radius:50%;background:var(--dim);flex:none}
+.bigdot.good{background:var(--green);box-shadow:0 0 12px var(--green)}
+.bigdot.warn{background:var(--amber);box-shadow:0 0 12px var(--amber)}
+.bigdot.bad,.bigdot.err{background:var(--red);box-shadow:0 0 12px var(--red)}
+.bigdot.wait{background:var(--amber);animation:blink .8s infinite}
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.tile{background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:10px 12px}
+.tile small{display:block;font-size:10px;letter-spacing:1.1px;font-weight:700;color:var(--muted);text-transform:uppercase}
+.tile b{display:block;font-family:var(--mono);font-size:20px;margin-top:4px;color:#fff;font-weight:600}
+.tile b.g{color:var(--green)}.tile b.w{color:var(--amber)}.tile b.r{color:var(--red)}
+.tile i{font-style:normal;font-size:11px;color:var(--dim)}
+.tile.span2{grid-column:span 2}
+.livepv{width:100%;aspect-ratio:16/9;background:#000;border-radius:8px;border:1px solid var(--line2);object-fit:contain;display:block}
+#toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(20px);background:#242a33;border:1px solid var(--line2);padding:10px 16px;border-radius:8px;opacity:0;transition:.2s;z-index:200;pointer-events:none;max-width:80vw;box-shadow:0 10px 30px rgba(0,0,0,.5)}
+#toast.on{opacity:1;transform:translateX(-50%)}
+::-webkit-scrollbar{width:10px;height:10px}::-webkit-scrollbar-thumb{background:#2a3039;border-radius:5px;border:2px solid var(--panel)}::-webkit-scrollbar-track{background:transparent}
+@media (max-width:1180px){.showname{display:none}.lower{grid-template-columns:minmax(0,1fr) 300px}.monitors{grid-template-columns:minmax(0,1fr) 112px minmax(0,1fr)}.tiles{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="brand"><img src="/logo-regie.png" alt="" width="26" height="26">ScènePro</div>
+    <nav class="menubar" id="menubar">
+      <button data-menu="file">Fichier</button>
+      <button data-menu="outputs">Sorties</button>
+      <button data-menu="inputs">Entrées</button>
+      <button data-menu="audio">Audio</button>
+      <button data-menu="stream">Diffusion</button>
+      <button data-menu="help">Aide</button>
+    </nav>
+    <div class="showname">Show : <b id="showName">Sans titre</b></div>
+    <div class="spacer"></div>
+    <div class="status">
+      <button class="spill" id="pillOut0" title="Sortie vidéo 1"><i class="led"></i>SORTIE 1</button>
+      <button class="spill" id="pillOut1" title="Sortie vidéo 2"><i class="led"></i>SORTIE 2</button>
+      <button class="spill" id="pillOut2" title="Sortie vidéo 3"><i class="led"></i>SORTIE 3</button>
+      <button class="spill" id="pillGfx" title="Synthé / habillage — cliquer pour ouvrir le poste Synthé"><i class="led"></i><span id="gfxLbl">SYNTHÉ</span></button>
+      <button class="spill" id="pillEnr" title="Poste Enregistrement"><i class="led"></i><span id="enrLbl">ENR</span></button>
+      <button class="spill" id="pillProg" title="Programmes (reportages, clips) — cliquer pour ouvrir le poste Programmes"><i class="led"></i><span id="progLbl">PROGRAMMES</span></button>
+      <button class="spill" id="pillLive" title="Diffusion en ligne (poste Diffusion)"><i class="led"></i><span id="liveLbl">DIFFUSION</span><span class="kb" id="liveKb"></span></button>
+      <button class="spill" id="pillRec" title="Enregistrement (sur le poste Diffusion)"><i class="led"></i><span id="recLbl">REC</span></button>
+    </div>
+    <div class="clock" id="clock">00:00:00</div>
+  </header>
+
+  <section class="monitors">
+    <div class="mon pvw">
+      <div class="mon-head"><span class="tag">PRÉVISUALISATION</span><span class="mon-title" id="pvwTitle">—</span><span class="chip" id="pvwType">VIDE</span></div>
+      <div class="screen-wrap"><div class="screen"><div class="empty">AUCUNE SOURCE</div><div class="stage" id="pvwStage"></div></div></div>
+      <div class="mon-foot">
+        <button class="tbtn-s" id="pvwPlay" title="Lire / pause l'aperçu (muet)"><span data-i="play"></span></button>
+        <button class="tbtn-s" id="pvwRewind" title="Revenir au début"><span data-i="restart"></span></button>
+        <input type="range" class="scrub" id="pvwScrub" min="0" max="1000" value="0" title="Point de départ (cue)">
+        <span class="tc" id="pvwTime">00:00 / 00:00</span>
+      </div>
+    </div>
+
+    <div class="tbar">
+      <div class="tb-label">TRANSITION</div>
+      <button class="tbtn cut" id="btnCut" title="Coupe franche"><b>CUT</b><small>Entrée</small></button>
+      <button class="tbtn auto" id="btnAuto" title="Fondu enchaîné"><span class="prog" id="autoProg"></span><b>AUTO</b><small>Espace</small></button>
+      <div class="rate" id="rate" title="Durée du fondu (secondes)">
+        <button data-ms="500">.5</button><button data-ms="1000" class="on">1</button><button data-ms="2000">2</button><button data-ms="3000">3</button>
+      </div>
+      <div class="tb-sep"></div>
+      <button class="tbtn next" id="btnNext" title="Envoyer le média suivant de la liste"><b>SUIVANT</b><small>N</small></button>
+      <button class="tbtn ftb" id="btnBlack" title="Fondu au noir"><b>NOIR</b><small>B</small></button>
+    </div>
+
+    <div class="mon pgm">
+      <div class="mon-head"><span class="tag">PROGRAMME</span><span class="mon-title" id="pgmTitle">—</span><span class="onair" id="onAir">ON AIR</span><span class="chip" id="pgmState">—</span></div>
+      <div class="screen-wrap"><div class="screen"><div class="empty">NOIR</div><div class="outs-badge" id="outsBadge"></div><div class="blackbadge" id="blackBadge">FONDU AU NOIR</div><div class="stage" id="pgmStage"></div></div></div>
+      <div class="mon-foot">
+        <button class="tbtn-s" id="pgmPlay" title="Pause / reprise (P)"><span data-i="pause"></span></button>
+        <button class="tbtn-s" id="pgmRestart" title="Reprendre au début (R)"><span data-i="restart"></span></button>
+        <div class="bar"><i id="pgmBar"></i></div>
+        <span class="tc" id="pgmElapsed">00:00</span>
+        <span class="tc big" id="pgmRemain">--:--</span>
+        <button class="tbtn-s" id="pgmMute" title="Couper le son des sorties et de la diffusion (M)"><span data-i="vol"></span></button>
+        <div class="vu" id="pgmVu" title="Niveau du master SALLE — cliquer pour la table de mixage"><span><i></i></span><span><i></i></span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="multiview" id="multiview"></section>
+
+  <section class="lower">
+    <div class="panel">
+      <div class="ph">
+        <div class="ltabs" id="lowTabs"><button data-t="bin" class="on">Médias en attente <span class="count" id="binCount">0</span></button><button data-t="mix">Mixage audio</button></div>
+        <span class="upnext" id="upNext" style="margin-left:8px"></span>
+        <div class="spacer"></div>
+        <button class="btn" id="btnAddMic" style="display:none" title="Micro, carte son, console…"><span data-i="mic"></span>Entrée audio</button>
+        <button class="btn" id="btnAddLive" title="Carte de capture, webcam…"><span data-i="cam"></span>Entrée live</button>
+        <button class="btn primary" id="btnAdd"><span data-i="plus"></span>Ajouter des médias</button>
+      </div>
+      <div class="bin" id="bin">
+        <div id="banner"></div>
+        <div class="grid" id="grid"></div>
+        <div class="dropzone" id="dropzone"><div><span data-i="upload"></span><b>Glissez vos vidéos et images ici</b>ou cliquez sur « Ajouter des médias »<br><small style="color:var(--dim)">MP4, WebM, MOV · JPG, PNG, WebP, GIF · cartes de capture via « Entrée live »</small></div></div>
+      </div>
+      <div class="mixer" id="mixer" style="display:none"><div class="strips" id="strips"></div></div>
+    </div>
+    <div class="panel">
+      <div class="ph"><h2>Programmation</h2><div class="spacer"></div><span class="chip" id="inspChip">—</span></div>
+      <div class="insp" id="insp"></div>
+    </div>
+  </section>
+</div>
+
+<div class="dropdown" id="dropdown"></div>
+<div class="modal" id="modal"><div class="dlg" id="dlg"><div class="dlg-h"><h3 id="mTitle"></h3><button class="xbtn" id="mClose"><span data-i="x"></span></button></div><div class="dlg-b" id="mBody"></div></div></div>
+<div id="toast"></div>
+<input type="file" id="fileIn" multiple accept="video/*,image/*" hidden>
+
+<script src="/gfx-render.js"></script>
+<script>
+'use strict';
+/* =========================================================
+   ScènePro — régie vidéo Preview / Programme
+   2 sorties vidéo · entrées live · diffusion en ligne
+   ========================================================= */
+const $ = s => document.querySelector(s);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const uid = () => Math.random().toString(36).slice(2, 10);
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+function fmt(s){ if(!isFinite(s) || s < 0) s = 0; s = Math.floor(s); const h = Math.floor(s/3600), m = Math.floor(s%3600/60), x = s%60;
+  return (h ? h + ':' + String(m).padStart(2,'0') : String(m).padStart(2,'0')) + ':' + String(x).padStart(2,'0'); }
+const nf = n => Math.round(n).toLocaleString('fr-FR');
+
+const I = {
+  play:'<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>',
+  pause:'<svg viewBox="0 0 24 24"><path d="M6 5h4v14H6zm8 0h4v14h-4z"/></svg>',
+  restart:'<svg viewBox="0 0 24 24"><path d="M12 5V1L7 6l5 5V7a5 5 0 1 1-5 5H5a7 7 0 1 0 7-7z"/></svg>',
+  vol:'<svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0 0 14 8v8a4.5 4.5 0 0 0 2.5-4zM14 3.2v2.1a7 7 0 0 1 0 13.4v2.1a9 9 0 0 0 0-17.6z"/></svg>',
+  mute:'<svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.6 3 2.7-2.7-1.4-1.4-2.7 2.7-2.7-2.7-1.4 1.4 2.7 2.7-2.7 2.7 1.4 1.4 2.7-2.7 2.7 2.7 1.4-1.4z"/></svg>',
+  loop:'<svg viewBox="0 0 24 24"><path d="M7 7h10v3l4-4-4-4v3H5v6h2zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2z"/></svg>',
+  image:'<svg viewBox="0 0 24 24"><path d="M21 19V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14c0 1.1.9 2 2 2h14a2 2 0 0 0 2-2zM8.5 13.5l2.5 3 3.5-4.5 4.5 6H5l3.5-4.5z"/></svg>',
+  video:'<svg viewBox="0 0 24 24"><path d="M17 10.5V7a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-3.5l4 4v-11l-4 4z"/></svg>',
+  cam:'<svg viewBox="0 0 24 24"><path d="M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10zm0 8a3 3 0 1 1 0-6 3 3 0 0 1 0 6zM20 4h-3.2L15 2H9L7.2 4H4a2 2 0 0 0-2 2v12c0 1.1.9 2 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zm0 14H4V6h4l1.8-2h4.4L16 6h4v12z"/></svg>',
+  plus:'<svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6z"/></svg>',
+  x:'<svg viewBox="0 0 24 24"><path d="M19 6.4 17.6 5 12 10.6 6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12z"/></svg>',
+  lock:'<svg viewBox="0 0 24 24"><path d="M18 8h-1V6A5 5 0 0 0 7 6v2H6a2 2 0 0 0-2 2v10c0 1.1.9 2 2 2h12a2 2 0 0 0 2-2V10a2 2 0 0 0-2-2zM9 6a3 3 0 0 1 6 0v2H9V6z"/></svg>',
+  next:'<svg viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>',
+  upload:'<svg viewBox="0 0 24 24"><path d="M19.35 10.04A7.49 7.49 0 0 0 12 4C9.11 4 6.6 5.64 5.35 8.04A6 6 0 0 0 6 20h13a5 5 0 0 0 .35-9.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/></svg>',
+  black:'<svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z"/></svg>',
+  clock:'<svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm1 11h-5v-2h3V6h2v7z"/></svg>',
+  send:'<svg viewBox="0 0 24 24"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg>',
+  check:'<svg viewBox="0 0 24 24"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg>',
+  dot:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/></svg>',
+  mic:'<svg viewBox="0 0 24 24"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.9V21h2v-3.1a7 7 0 0 0 6-6.9h-2z"/></svg>',
+  eye:'<svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.7 7.6 1 12c1.7 4.4 6 7.5 11 7.5s9.3-3.1 11-7.5c-1.7-4.4-6-7.5-11-7.5zM12 17a5 5 0 1 1 0-10 5 5 0 0 1 0 10zm0-8a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/></svg>',
+};
+document.querySelectorAll('[data-i]').forEach(e => e.innerHTML = I[e.dataset.i]);
+
+/* ---------------- État ---------------- */
+const NBUS = 3;
+const state = {
+  items: [], previewId: null,
+  fadeMs: 1000,
+  showName: 'Sans titre',
+  route: [0, 1, 2, 0],    // bus programme envoyé sur [Sortie 1, Sortie 2, Sortie 3, Diffusion web]
+  audioSink: '',
+};
+// programmes envoyés par le poste Programmes (reportages, clips) : hors de la liste des médias, lus depuis le serveur
+const progItems = new Map();
+const getItem = id => state.items.find(i => i.id === id) || progItems.get(id) || null;
+const pgmItem = () => Engine.sel ? Engine.sel.item : null;
+const onAirBuses = it => Engine.buses.filter(b => b.programId === it.id).map(b => b.i);
+const OUTS = [0, 1, 2], WEB = 3;
+const ROUTE_NAMES = ['Sortie 1', 'Sortie 2', 'Sortie 3', 'Diffusion web'], ROUTE_SHORT = ['S1', 'S2', 'S3', 'WEB'];
+const routeActive = r => r === WEB ? Live.status === 'live' : outLive(r);
+const pvwItem = () => getItem(state.previewId);
+const isReady = it => !!it && it.status === 'ready' && (it.type === 'live' ? Inputs.streams.has(it.id) : !!(it.file || it.src));
+function nextReady(fromId){
+  const idx = fromId ? state.items.findIndex(i => i.id === fromId) : -1;
+  for(let j = idx + 1; j < state.items.length; j++) if(isReady(state.items[j])) return state.items[j];
+  return null;
+}
+const transMs = it => (it && it.transition === 'cut') ? 0 : state.fadeMs;
+const typeLabel = t => t === 'video' ? 'VIDÉO' : t === 'live' ? 'LIVE' : 'IMAGE';
+
+/* ---------------- Table de mixage audio ----------------
+   Le son ne vient que du PGM 1 (les PGM 2 et 3 sont des écrans de salle muets).
+   Tranches : Médias PGM 1 · une par entrée live (option AFV = le son suit l'image) · micros / entrées audio.
+   Deux bus master : SALLE (haut-parleurs / sono) et WEB (diffusion en ligne), chacun avec limiteur. */
+const dbToGain = db => db <= -60 ? 0 : Math.pow(10, db / 20);
+const AUDIO_CONSTRAINTS = {echoCancellation: false, noiseSuppression: false, autoGainControl: false};
+// ouvre une carte son / un micro en demandant le maximum de canaux disponibles, sans traitement automatique
+async function openAudioDevice(deviceId){
+  const base = Object.assign({deviceId: {exact: deviceId}, sampleRate: 48000}, AUDIO_CONSTRAINTS);
+  for(const cc of [8, 4, 2]){
+    try{ return await navigator.mediaDevices.getUserMedia({audio: Object.assign({channelCount: {ideal: cc}}, base)}); }catch(e){ if(e.name !== 'OverconstrainedError') throw e; }
+  }
+  return navigator.mediaDevices.getUserMedia({audio: base});
+}
+const Mixer = {
+  ctx: null, dest: null, chans: [], masters: {}, saved: {}, sink: '', mute: false, pendingInputs: [], sig: '',
+  init(){
+    if(this.ctx) return;
+    try{
+      const c = this.ctx = new AudioContext({latencyHint: 'playback', sampleRate: 48000});
+      this.dest = c.createMediaStreamDestination();
+      this.masters.salle = this.makeMaster('salle', 'SALLE', c.destination);
+      this.masters.web = this.makeMaster('web', 'WEB', this.dest);
+      this.ensure({id: 'media', kind: 'media', name: 'Médias PGM 1'});
+      if(this.sink && c.setSinkId) c.setSinkId(this.sink).catch(()=>{});
+    }catch(e){ this.ctx = null; }
+  },
+  resume(){ if(this.ctx && this.ctx.state !== 'running') this.ctx.resume().catch(()=>{}); },
+  makeMaster(key, name, out){
+    const c = this.ctx, s = this.saved[key] || {};
+    const m = {key, name, db: s.db != null ? s.db : 0, mute: !!s.mute, master: true};
+    m.sum = c.createGain(); m.fader = c.createGain();
+    m.lim = c.createDynamicsCompressor();
+    m.lim.threshold.value = -1.5; m.lim.knee.value = 0; m.lim.ratio.value = 20; m.lim.attack.value = 0.002; m.lim.release.value = 0.12;
+    m.split = c.createChannelSplitter(2); m.anL = c.createAnalyser(); m.anR = c.createAnalyser(); m.anL.fftSize = m.anR.fftSize = 1024;
+    m.sum.connect(m.fader); m.fader.connect(m.lim); m.lim.connect(out); m.lim.connect(m.split);
+    m.split.connect(m.anL, 0); m.split.connect(m.anR, 1);
+    this.applyMaster(m);
+    return m;
+  },
+  ensure(def){
+    if(!this.ctx) return null;
+    let ch = this.chans.find(c => c.id === def.id);
+    if(ch){ if(def.stream && def.stream !== ch.stream) this.setStream(ch, def.stream); if(def.name) ch.name = def.name; return ch; }
+    const c = this.ctx, s = this.saved[def.id] || {}, mic = def.kind === 'input';
+    ch = { id: def.id, kind: def.kind, name: def.name, itemId: def.itemId || null, deviceId: def.deviceId || null, chan: def.chan == null ? null : def.chan, devName: def.devName || '',
+      db: s.db != null ? s.db : 0, mute: !!s.mute, salle: s.salle != null ? s.salle : !mic, web: s.web != null ? s.web : true, afv: s.afv != null ? s.afv : true };
+    ch.inp = c.createGain(); ch.fader = c.createGain(); ch.an = c.createAnalyser(); ch.an.fftSize = 1024;
+    ch.sS = c.createGain(); ch.sW = c.createGain();
+    ch.inp.connect(ch.fader); ch.fader.connect(ch.an); ch.fader.connect(ch.sS); ch.fader.connect(ch.sW);
+    ch.sS.connect(this.masters.salle.sum); ch.sW.connect(this.masters.web.sum);
+    if(def.stream) this.setStream(ch, def.stream);
+    this.chans.push(ch); this.apply(ch);
+    return ch;
+  },
+  setStream(ch, stream){
+    if(ch.src){ try{ ch.src.disconnect(); }catch(e){} ch.src = null; }
+    if(ch.split){ try{ ch.split.disconnect(); ch.mono.disconnect(); }catch(e){} ch.split = ch.mono = null; }
+    ch.stream = stream;
+    const at = stream.getAudioTracks(); if(!at.length) return;
+    ch.src = this.ctx.createMediaStreamSource(new MediaStream(at));
+    if(ch.chan == null) ch.src.connect(ch.inp);
+    else {
+      // carte son multi-entrées : on n'extrait qu'un canal (Entrée 1, Entrée 2…), envoyé au centre (mono)
+      const n = Math.max(2, (at[0].getSettings().channelCount || 2));
+      ch.split = this.ctx.createChannelSplitter(n);
+      ch.mono = this.ctx.createGain(); ch.mono.channelCount = 1; ch.mono.channelCountMode = 'explicit';
+      ch.src.connect(ch.split); ch.split.connect(ch.mono, Math.min(ch.chan, n - 1)); ch.mono.connect(ch.inp);
+    }
+  },
+  remove(id){
+    const i = this.chans.findIndex(c => c.id === id); if(i < 0) return;
+    const ch = this.chans[i];
+    [ch.src, ch.split, ch.mono, ch.inp, ch.fader, ch.sS, ch.sW].forEach(n => { try{ n && n.disconnect(); }catch(e){} });
+    this.chans.splice(i, 1);
+    // le flux de la carte son n'est coupé que si plus aucune tranche ne l'utilise
+    if(ch.kind === 'input' && ch.stream && !this.chans.some(c => c.stream === ch.stream)) ch.stream.getTracks().forEach(t => t.stop());
+    this.save();
+  },
+  attachMedia(m){
+    this.init(); if(!this.ctx || m._src) return;
+    try{ const s = this.ctx.createMediaElementSource(m); s.connect(this.chans.find(c => c.id === 'media').inp); m._src = s; }catch(e){}
+  },
+  detach(m){ if(m._src){ try{ m._src.disconnect(); }catch(e){} m._src = null; } },
+  gate(ch){ // AFV : la tranche d'une entrée live ne s'ouvre que lorsqu'elle est à l'antenne sur le PGM 1
+    if(ch.kind !== 'live' || !ch.afv) return 1;
+    const b = Engine.buses[0];
+    return b && !b.black && (b.programId === ch.itemId || (b.pip.on && b.pip.itemId === ch.itemId)) ? 1 : 0;
+  },
+  apply(ch){
+    if(!this.ctx) return;
+    const t = this.ctx.currentTime;
+    ch.fader.gain.setTargetAtTime(ch.mute ? 0 : dbToGain(ch.db) * this.gate(ch), t, ch.kind === 'live' ? 0.12 : 0.02);
+    ch.sS.gain.setTargetAtTime(ch.salle ? 1 : 0, t, 0.02);
+    ch.sW.gain.setTargetAtTime(ch.web ? 1 : 0, t, 0.02);
+  },
+  applyMaster(m){ m.fader.gain.setTargetAtTime((m.mute || this.mute) ? 0 : dbToGain(m.db), this.ctx.currentTime, 0.03); },
+  applyAll(){ if(!this.ctx) return; this.chans.forEach(c => this.apply(c)); Object.values(this.masters).forEach(m => this.applyMaster(m)); },
+  syncLive(){
+    if(!this.ctx) return;
+    state.items.filter(i => i.type === 'live' && i.audioId && Inputs.streams.has(i.id))
+      .forEach(i => this.ensure({id: 'live-' + i.id, kind: 'live', itemId: i.id, name: i.name, stream: Inputs.streams.get(i.id)}));
+    this.chans.filter(c => c.kind === 'live' && !state.items.some(i => 'live-' + i.id === c.id && Inputs.streams.has(i.id))).forEach(c => this.remove(c.id));
+    this.chans.forEach(c => this.apply(c));
+  },
+  level(an){
+    const b = an._buf || (an._buf = new Float32Array(an.fftSize));
+    an.getFloatTimeDomainData(b);
+    let p = 0; for(let i = 0; i < b.length; i++){ const v = b[i] < 0 ? -b[i] : b[i]; if(v > p) p = v; }
+    return p;
+  },
+  setSink(id){
+    this.sink = id;
+    if(this.ctx && this.ctx.setSinkId) this.ctx.setSinkId(id).catch(e => toast('Périphérique audio indisponible : ' + e.message));
+    this.save();
+  },
+  save(){
+    const o = {sink: this.sink, ch: {}, inputs: []};
+    this.chans.forEach(c => o.ch[c.id] = {db: c.db, mute: c.mute, salle: c.salle, web: c.web, afv: c.afv});
+    Object.values(this.masters).forEach(m => o.ch[m.key] = {db: m.db, mute: m.mute});
+    o.inputs = this.chans.filter(c => c.kind === 'input').map(c => ({id: c.id, name: c.name, deviceId: c.deviceId, chan: c.chan}));
+    Object.assign(this.saved, o.ch);
+    clearTimeout(this._st); this._st = setTimeout(() => DB.put('kv', 'mixer', o).catch(()=>{}), 300);
+  },
+  async load(){
+    try{ const o = await DB.get('kv', 'mixer'); if(o){ this.saved = o.ch || {}; this.sink = o.sink || ''; this.pendingInputs = o.inputs || []; } }catch(e){}
+  },
+  async restoreInputs(){
+    let ok = false;
+    try{ ok = (await navigator.permissions.query({name: 'microphone'})).state === 'granted'; }catch(e){}
+    if(!ok) return;
+    const streams = {};
+    for(const d of this.pendingInputs){
+      try{
+        const s = streams[d.deviceId] || (streams[d.deviceId] = await openAudioDevice(d.deviceId));
+        this.ensure({id: d.id, kind: 'input', name: d.name, deviceId: d.deviceId, chan: d.chan, stream: s});
+      }catch(e){}
+    }
+    this.pendingInputs = [];
+  },
+};
+['pointerdown', 'keydown'].forEach(ev => document.addEventListener(ev, () => Mixer.resume(), true));
+
+/* ---------------- Entrées live (cartes de capture, webcams) ---------------- */
+const Inputs = {
+  streams: new Map(),
+  constraints(it){
+    return {
+      video: it.deviceId ? {deviceId: {exact: it.deviceId}, width: {ideal: +it.resW || 1920}, height: {ideal: +it.resH || 1080}, frameRate: {ideal: 30}} : true,
+      audio: it.audioId ? {deviceId: {exact: it.audioId}, echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: 2} : false,
+    };
+  },
+  async open(it){
+    if(this.streams.has(it.id)){ it.status = 'ready'; return true; }
+    try{
+      const s = await navigator.mediaDevices.getUserMedia(this.constraints(it));
+      this.streams.set(it.id, s); it.status = 'ready'; it.err = '';
+      const vt = s.getVideoTracks()[0];
+      if(vt){ const st = vt.getSettings(); it.w = st.width; it.h = st.height;
+        vt.addEventListener('ended', () => { this.streams.delete(it.id); it.status = 'locked'; toast('Entrée « ' + it.name + ' » déconnectée.'); render(); }); }
+      if(!it.thumb) liveThumb(it);
+      return true;
+    }catch(e){ it.status = 'locked'; it.err = e.name === 'NotFoundError' || e.name === 'OverconstrainedError' ? 'Périphérique introuvable' : e.message; return false; }
+  },
+  close(id){ const s = this.streams.get(id); if(s){ s.getTracks().forEach(t => t.stop()); this.streams.delete(id); } },
+};
+function liveThumb(it){
+  const s = Inputs.streams.get(it.id); if(!s) return;
+  const v = document.createElement('video'); v.muted = true; v.srcObject = s;
+  v.onloadeddata = () => setTimeout(() => {
+    const cv = document.createElement('canvas'); cv.width = 320; cv.height = 180;
+    const g = cv.getContext('2d'); g.fillStyle = '#000'; g.fillRect(0, 0, 320, 180);
+    const k = Math.min(320 / v.videoWidth, 180 / v.videoHeight) || 1;
+    try{ g.drawImage(v, (320 - v.videoWidth * k) / 2, (180 - v.videoHeight * k) / 2, v.videoWidth * k, v.videoHeight * k); it.thumb = cv.toDataURL('image/jpeg', .78); }catch(e){}
+    v.srcObject = null; renderBin(); save();
+  }, 400);
+  v.play().catch(()=>{});
+}
+
+/* ---------------- Stage : un "écran" capable de lire vidéo / image / live avec fondu ---------------- */
+class Stage {
+  // opts: audible (son local), abus (n° de bus audio de la régie), output (fenêtre de sortie), owner (bus programme)
+  constructor(win, el, opts = {}){
+    this.win = win; this.doc = el.ownerDocument; this.el = el;
+    this.audible = !!opts.audible; this.abus = opts.abus == null ? null : opts.abus; this.output = !!opts.output;
+    this.owner = opts.owner || null;
+    this.urls = new Map(); this.cur = null; this.blocked = false;
+    el.innerHTML = '';
+    this.blk = this.doc.createElement('div'); this.blk.className = 'stage-black';
+    el.appendChild(this.blk);
+    // habillage (synthés, logo…) : incrusté au-dessus du PIP, sous le fondu au noir — uniquement sur les stages programme
+    if(this.owner){
+      this.gfx = this.doc.createElement('canvas'); this.gfx.className = 'gfx';
+      this.gfx.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;z-index:8;pointer-events:none;display:block';
+      el.insertBefore(this.gfx, this.blk);
+    }
+  }
+  drawGfx(filter, now){
+    const c = this.gfx; if(!c) return;
+    if(!filter || !Gfx.scene.activeFor(filter, now)){ if(c._used){ c.getContext('2d').clearRect(0, 0, c.width, c.height); c._used = false; } return; }
+    const dpr = this.win.devicePixelRatio || 1, w = Math.round(c.clientWidth * dpr), h = Math.round(c.clientHeight * dpr);
+    if(!w || !h) return;
+    if(c.width !== w || c.height !== h){ c.width = w; c.height = h; }
+    const g = c.getContext('2d'); g.clearRect(0, 0, w, h);
+    // le cadre 16/9 de l'habillage suit l'image (object-fit: contain) : dessin sur toute la surface, centré
+    Gfx.scene.draw(g, w, h, now, filter); c._used = true;
+  }
+  url(item){ if(item.src) return item.src; let u = this.urls.get(item.id); if(!u){ u = this.win.URL.createObjectURL(item.file); this.urls.set(item.id, u); } return u; }
+  forget(id){ const u = this.urls.get(id); if(u){ try{ this.win.URL.revokeObjectURL(u); }catch(e){} this.urls.delete(id); } }
+  get video(){ return this.cur && this.cur.m.tagName === 'VIDEO' ? this.cur.m : null; }
+  targetVol(item){ return (this.owner && this.owner.black) ? 0 : clamp(item.volume, 0, 1); }
+  // seul le moniteur du PGM 1 (abus = 0) produit du son, envoyé dans la table de mixage.
+  // le son des entrées live passe par leur propre tranche de mixage.
+  isMuted(item){ return this.abus == null || !item.audio || item.type === 'live'; }
+  ramp(m, to, ms){
+    if(m._ramp){ this.win.clearInterval(m._ramp); m._ramp = null; }
+    if(!ms){ try{ m.volume = to; }catch(e){} return; }
+    const from = m.volume, t0 = Date.now();
+    m._ramp = this.win.setInterval(() => {
+      const k = Math.min(1, (Date.now() - t0) / ms);
+      try{ m.volume = clamp(from + (to - from) * k, 0, 1); }catch(e){}
+      if(k >= 1){ this.win.clearInterval(m._ramp); m._ramp = null; }
+    }, 30);
+  }
+  load(item, {startAt = 0, fade = 0, play = true} = {}){
+    const d = this.doc;
+    const wrap = d.createElement('div'); wrap.className = 'layer'; wrap.style.opacity = '0';
+    let m;
+    if(item.type === 'video' || item.type === 'live'){
+      m = d.createElement('video');
+      m.playsInline = true; m.preload = 'auto'; m.loop = item.type === 'video' && !!item.loop;
+      m.muted = this.isMuted(item);
+      m.volume = fade ? 0 : this.targetVol(item);
+      if(this.output && state.audioSink && m.setSinkId) m.setSinkId(state.audioSink).catch(()=>{});
+      if(item.type === 'live'){
+        const s = Inputs.streams.get(item.id);
+        try{ m.srcObject = s || null; }catch(e){ try{ m.srcObject = new this.win.MediaStream(s.getTracks()); }catch(e2){} }
+        play = true; startAt = 0;
+      } else m.src = this.url(item);
+      if(this.abus === 0 && item.type === 'video') Mixer.attachMedia(m);
+    } else {
+      m = d.createElement('img'); m.draggable = false; m.decoding = 'async';
+      m.src = this.url(item);
+    }
+    wrap.appendChild(m);
+    this.el.insertBefore(wrap, this.blk);
+    this.cur = {wrap, m, item};
+    let shown = false;
+    const reveal = () => {
+      if(shown || !wrap.isConnected) return; shown = true;
+      // un chargement plus récent a eu lieu entre-temps : cette couche est périmée, on la retire sans l'afficher
+      if(!this.cur || this.cur.wrap !== wrap){ this.retire(wrap, 0); return; }
+      if(fade){ wrap.style.transition = `opacity ${fade}ms linear`; void wrap.offsetWidth; }
+      wrap.style.opacity = '1';
+      [...this.el.querySelectorAll('.layer')].forEach(l => { if(l !== wrap) this.retire(l, fade); });
+    };
+    if(m.tagName === 'VIDEO'){
+      m.addEventListener('loadedmetadata', () => {
+        if(startAt > 0.05){ try{ m.currentTime = Math.min(startAt, Math.max(0, m.duration - 0.1)); }catch(e){} m.addEventListener('seeked', reveal, {once:true}); }
+        else m.addEventListener('loadeddata', reveal, {once:true});
+        if(m.readyState >= 2 && !(startAt > 0.05)) reveal();
+        if(play) this.play(m, item, fade);
+      }, {once:true});
+      m.addEventListener('ended', () => { if(this.cur && this.cur.m === m) Engine.onEnded(this); });
+      m.addEventListener('error', () => { reveal(); if(this === Engine.pvw) toast('Lecture impossible : « ' + item.name + ' » (format non pris en charge ?)'); });
+    } else {
+      m.addEventListener('load', reveal, {once:true});
+      m.addEventListener('error', reveal, {once:true});
+    }
+    this.win.setTimeout(reveal, 1500);
+    return m;
+  }
+  play(m, item, fade){
+    const p = m.play();
+    if(p && p.catch) p.then(() => {
+      if(!m.muted) this.ramp(m, this.targetVol(item), fade || 0);
+    }).catch(err => {
+      if(err && err.name === 'NotAllowedError' && !m.muted){
+        m.muted = true; this.blocked = true; m.play().catch(()=>{});
+        if(this.output) toast('Son bloqué par le navigateur : double-cliquez sur la fenêtre de sortie pour l\'activer.');
+      }
+    });
+  }
+  retire(layer, fade){
+    const m = layer.firstChild;
+    if(layer._retiring) return; layer._retiring = true;
+    const kill = () => {
+      if(m && m.tagName === 'VIDEO'){ m.pause(); Mixer.detach(m); m.srcObject = null; m.removeAttribute('src'); try{ m.load(); }catch(e){} }
+      layer.remove();
+    };
+    if(fade){ if(m && m.tagName === 'VIDEO' && !m.muted) this.ramp(m, 0, fade); this.win.setTimeout(kill, fade + 60); }
+    else kill();
+  }
+  applyAudio(){
+    const v = this.video; if(!v) return;
+    const it = this.cur.item; v.loop = it.type === 'video' && !!it.loop;
+    v.muted = this.isMuted(it);
+    if(!v._ramp) try{ v.volume = this.targetVol(it); }catch(e){}
+    if(this.output && v.setSinkId && (v.sinkId || '') !== state.audioSink) v.setSinkId(state.audioSink).catch(()=>{});
+  }
+  unblock(){ if(this.blocked){ this.blocked = false; this.applyAudio(); } }
+  setAudible(a){ this.audible = a; this.applyAudio(); }
+  setBlack(on, ms){
+    this.blk.style.transition = `opacity ${ms}ms linear`; this.blk.style.opacity = on ? '1' : '0';
+    const v = this.video; if(v && !v.muted) this.ramp(v, on ? 0 : this.targetVol(this.cur.item), ms);
+  }
+  // PIP : petite incrustation (caméra, vidéo, image) par-dessus le programme
+  setPip(cfg, item, fade = 300){
+    const d = this.doc;
+    if(!this.pipEl){ this.pipEl = d.createElement('div'); this.pipEl.className = 'pip'; this.pipEl.style.opacity = '0'; this.el.insertBefore(this.pipEl, this.blk); }
+    const el = this.pipEl, show = !!(cfg && cfg.on && isReady(item));
+    if(show && this.pipItemId !== item.id){
+      const old = el.firstChild;
+      if(old){ if(old.tagName === 'VIDEO'){ old.pause(); old.srcObject = null; old.removeAttribute('src'); } old.remove(); }
+      let m;
+      if(item.type === 'image'){ m = d.createElement('img'); m.src = this.url(item); }
+      else {
+        m = d.createElement('video'); m.muted = true; m.playsInline = true; m.loop = true; m.autoplay = true;
+        if(item.type === 'live'){ try{ m.srcObject = Inputs.streams.get(item.id); }catch(e){} } else m.src = this.url(item);
+        m.play().catch(()=>{});
+      }
+      el.appendChild(m); this.pipItemId = item.id;
+    }
+    if(cfg){
+      const mg = 3, w = cfg.size * 100;
+      el.style.width = w + '%';
+      el.style.left = el.style.right = el.style.top = el.style.bottom = 'auto';
+      if(cfg.pos === 'c'){ el.style.left = (50 - w / 2) + '%'; el.style.top = '50%'; el.style.transform = 'translateY(-50%)'; }
+      else { el.style.transform = ''; el.style[cfg.pos[0] === 't' ? 'top' : 'bottom'] = mg + '%'; el.style[cfg.pos[1] === 'l' ? 'left' : 'right'] = (mg * 9 / 16) + '%'; }
+      el.classList.toggle('noborder', !cfg.border);
+    }
+    el.style.transition = `opacity ${fade}ms linear`;
+    el.style.opacity = show ? '1' : '0';
+    if(!show && this.pipItemId){
+      const id = this.pipItemId;
+      this.win.setTimeout(() => { if(this.pipItemId === id && el.style.opacity === '0'){ const m = el.firstChild; if(m){ if(m.tagName === 'VIDEO'){ m.pause(); m.srcObject = null; m.removeAttribute('src'); } m.remove(); } this.pipItemId = null; } }, fade + 100);
+    }
+  }
+  clear(){ [...this.el.querySelectorAll('.layer')].forEach(l => this.retire(l, 0)); this.cur = null; }
+  destroy(){ this.clear(); for(const id of [...this.urls.keys()]) this.forget(id); }
+}
+
+/* ---------------- Fenêtres de sortie ---------------- */
+const outputHTML = n => `<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>ScènePro — SORTIE ${n}</title><style>
+html,body{margin:0;height:100%;background:#000;overflow:hidden;cursor:none}
+.stage{position:absolute;inset:0;overflow:hidden;background:#000}
+.layer{position:absolute;inset:0}
+.layer video,.layer img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:block}
+.stage-black{position:absolute;inset:0;background:#000;opacity:0;pointer-events:none;z-index:10}
+.pip{position:absolute;z-index:5;aspect-ratio:16/9;overflow:hidden;background:#000;outline:3px solid rgba(255,255,255,.9);box-shadow:0 6px 30px rgba(0,0,0,.6)}
+.pip.noborder{outline:0;box-shadow:none}
+.pip video,.pip img{width:100%;height:100%;object-fit:cover;display:block}
+#hint{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:50;background:rgba(18,21,26,.92);color:#e7eaee;border:1px solid #ff3b3b;
+ border-radius:12px;padding:22px 30px;font:15px/1.5 "Segoe UI",system-ui,sans-serif;text-align:center;opacity:0;transition:opacity .3s;pointer-events:none}
+#hint.on{opacity:1}#hint b{font-size:20px;display:block;margin-bottom:4px}#hint small{color:#8b93a0}
+#ret{display:none;position:fixed;inset:0;z-index:40;pointer-events:none;font-family:"Segoe UI",system-ui,sans-serif;color:#fff}
+body.retour #ret{display:block}
+.rt-top,.rt-bot{position:absolute;left:0;right:0;display:flex;align-items:center;justify-content:space-between;padding:1.2vh 2vw;background:rgba(0,0,0,.72)}
+.rt-top{top:0;font-size:4.2vh}.rt-bot{bottom:0;gap:2vw}
+#rtClock{font-family:Consolas,monospace;font-weight:700;letter-spacing:.1em}
+#rtState{font-size:2.4vh;font-weight:800;letter-spacing:.2em;padding:.4vh 1vw;border:2px solid #ff3b3b;border-radius:.6vh;color:#ff8a8a}
+.rt-bot>div{flex:1;min-width:0}.rt-bot>div:last-child{text-align:right}
+.rt-bot small{display:block;font-size:1.8vh;letter-spacing:.2em;color:#8b93a0;font-weight:700}
+.rt-bot b{display:block;font-size:3.2vh;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#rtRem{flex:none !important;font-family:Consolas,monospace;font-size:8vh;font-weight:700;line-height:1}
+#rtRem.warn{color:#ffb020}#rtRem.crit{color:#ff3b3b}
+</style></head><body><div class="stage" id="stage"></div>
+<div id="ret"><div class="rt-top"><span id="rtClock"></span><span id="rtState"></span></div>
+<div class="rt-bot"><div><small>À L'ANTENNE (PGM 1)</small><b id="rtNow"></b></div><div id="rtRem"></div><div><small>SUIVANT</small><b id="rtNext"></b></div></div></div>
+<div id="hint"><b>Sortie ${n} — Programme</b>Double-cliquez ici pour passer en plein écran<br><small>Échap pour quitter le plein écran · ce message disparaît tout seul</small></div></body></html>`;
+
+/* ---------------- Moteur Programme ---------------- */
+/* Un bus programme = un "programme" indépendant (PGM 1, 2, 3), comme sur un mélangeur à plusieurs bus.
+   Il s'affiche dans sa vignette multiview (qui porte son son vers la régie / le web),
+   dans le grand moniteur s'il est sélectionné, et sur les sorties qui lui sont routées. */
+class Bus {
+  constructor(i){ this.i = i; this.programId = null; this.t0 = 0; this.acc = 0; this.paused = false; this.endDone = false; this.black = false; this.mini = null; this.follow = false;
+    this.pip = {on: false, itemId: null, pos: 'br', size: 0.3, border: true}; }
+  applyPip(fade = 300){
+    const it = getItem(this.pip.itemId);
+    if(this.pip.on && !isReady(it)) this.pip.on = false;
+    this.stages().forEach(s => s.setPip(this.pip, it, fade));
+    this.followers().forEach(f => { f.pip = Object.assign({}, this.pip); f.applyPip(fade); });
+    Mixer.syncLive();
+    render();
+  }
+  followers(){ return this.i === 0 ? Engine.buses.filter(b => b.follow) : []; }
+  get item(){ return getItem(this.programId); }
+  get name(){ return 'PGM ' + (this.i + 1); }
+  stages(){
+    const a = [this.mini];
+    if(Engine.sel === this && Engine.big) a.push(Engine.big);
+    Engine.outs.forEach((o, i) => { if(o && state.route[i] === this.i) a.push(o.stage); });
+    return a.filter(Boolean);
+  }
+  master(){
+    // le PGM 1 porte le son : sa vignette (qui alimente la table de mixage) reste maître pour garder l'image calée sur le son
+    if(this.i === 0) return this.mini;
+    const i = OUTS.find(k => Engine.outs[k] && state.route[k] === this.i); return i != null ? Engine.outs[i].stage : this.mini;
+  }
+  elapsed(){ return this.acc + (this.paused ? 0 : Date.now() - this.t0); }
+  routes(){ return [0, 1, 2, 3].filter(r => state.route[r] === this.i); }
+  onAir(){ return this.routes().some(routeActive); }
+  go(item, fade, startAt = 0){
+    if(!isReady(item)) return;
+    this.programId = item.id;
+    this.acc = 0; this.t0 = Date.now(); this.paused = false; this.endDone = false;
+    if(this.black){ this.black = false; this.stages().forEach(s => s.setBlack(false, fade)); }
+    this.stages().forEach(s => s.load(item, {startAt, fade, play: true}));
+    if(fade && this === Engine.sel) animateAuto(fade);
+    this.followers().forEach(f => f.go(item, fade, startAt));
+    render();
+  }
+  next(){
+    const n = nextReady(this.programId);
+    if(!n){ toast(this.name + ' : fin de la liste.'); return null; }
+    this.go(n, transMs(n));
+    return n;
+  }
+  togglePause(){
+    const it = this.item; if(!it || it.type === 'live') return;
+    if(this.paused){ this.paused = false; this.t0 = Date.now(); this.stages().forEach(s => s.video && s.video.play().catch(()=>{})); }
+    else { this.paused = true; this.acc += Date.now() - this.t0; this.stages().forEach(s => s.video && s.video.pause()); }
+    this.followers().forEach(f => { if(f.paused !== this.paused && f.programId === this.programId) f.togglePause(); });
+    render();
+  }
+  restart(){
+    const it = this.item; if(!it || it.type === 'live') return;
+    this.acc = 0; this.t0 = Date.now(); this.endDone = false;
+    this.stages().forEach(s => { const v = s.video; if(v){ v.currentTime = 0; if(!this.paused) v.play().catch(()=>{}); } });
+    this.followers().forEach(f => { if(f.programId === this.programId) f.restart(); });
+    render();
+  }
+  setBlack(on, ms = state.fadeMs){ this.black = on; this.stages().forEach(s => s.setBlack(on, ms)); this.followers().forEach(f => f.setBlack(on, ms)); render(); }
+  handleEnd(){
+    const it = this.item; if(!it || this.endDone) return;
+    this.endDone = true;
+    if(it.prog && it.endAction === 'back') Prog.giveBack(this);
+    else if(it.endAction === 'next') this.next();
+    else if(it.endAction === 'black') this.setBlack(true);
+    render();
+  }
+  tick(){
+    const it = this.item; if(!it) return;
+    const ms = this.master(), mv = ms.video;
+    if(mv && it.type === 'video' && mv.readyState >= 2 && !mv.seeking){
+      this.stages().forEach(s => {
+        const v = s.video; if(s === ms || !v || !s.cur || s.cur.item !== ms.cur.item || v.seeking) return;
+        if(Math.abs(v.currentTime - mv.currentTime) > 0.3) v.currentTime = mv.currentTime;
+        if(mv.paused !== v.paused){ if(mv.paused) v.pause(); else v.play().catch(()=>{}); }
+      });
+    }
+    if(!this.endDone && !this.paused){
+      if(it.type === 'video'){ if(mv && mv.ended && !mv.loop) this.handleEnd(); }
+      else if(it.type === 'image' && it.imageDuration > 0 && this.elapsed() >= it.imageDuration * 1000) this.handleEnd();
+    }
+  }
+}
+
+const Engine = {
+  pvw: null, big: null, buses: [], sel: null, outs: [null, null, null],
+  tickId: null, tickWin: null,
+  get paused(){ return this.sel ? this.sel.paused : false; },
+  stages(){ return [this.big, ...this.buses.map(b => b.mini), ...this.outs.map(o => o && o.stage)].filter(Boolean); },
+  unfollowSel(){ if(this.sel.follow){ this.sel.follow = false; toast(this.sel.name + ' ne suit plus le PGM 1 (mode RETOUR désactivé).'); } },
+  take(fade){
+    const it = pvwItem();
+    if(!isReady(it)){ toast('Aucun média prêt en prévisualisation.'); return; }
+    this.unfollowSel();
+    let startAt = 0;
+    const pv = this.pvw.video;
+    if(it.type === 'video' && pv && isFinite(pv.duration) && pv.currentTime < pv.duration - 0.5) startAt = pv.currentTime;
+    this.sel.go(it, fade, startAt);
+    const n = nextReady(it.id);
+    cuePreview(n ? n.id : it.id);
+  },
+  next(){
+    this.unfollowSel();
+    const n = this.sel.next();
+    if(n){ const n2 = nextReady(n.id); cuePreview(n2 ? n2.id : n.id); }
+  },
+  togglePause(){ this.sel.togglePause(); },
+  restart(){ this.sel.restart(); },
+  setBlack(on, ms){ this.sel.setBlack(on, ms); },
+  onEnded(stage){ const b = this.buses.find(b => b.master() === stage); if(b) b.handleEnd(); },
+  tick(){
+    this.outs.forEach((o, i) => { if(o && o.win.closed) outputClosed(i); });
+    this.buses.forEach(b => b.tick());
+    // les programmes en mode RETOUR restent calés sur le PGM 1
+    const p1 = this.buses[0], p1v = p1.master().video;
+    this.buses.forEach(f => {
+      if(!f.follow || f.programId !== p1.programId || !p1v || !p1.item || p1.item.type !== 'video') return;
+      const fv = f.master().video;
+      if(fv && !fv.seeking && Math.abs(fv.currentTime - p1v.currentTime) > 0.3) fv.currentTime = p1v.currentTime;
+    });
+    updateRetour();
+    // le grand moniteur suit le bus sélectionné
+    const big = this.big, mv = this.sel.master().video, bv = big.video;
+    if(bv && mv && big.cur && this.sel.mini.cur && big.cur.item === this.sel.mini.cur.item && this.sel.item && this.sel.item.type === 'video' && !bv.seeking){
+      if(Math.abs(bv.currentTime - mv.currentTime) > 0.3) bv.currentTime = mv.currentTime;
+      if(mv.paused !== bv.paused){ if(mv.paused) bv.pause(); else bv.play().catch(()=>{}); }
+    }
+    renderTimes();
+  },
+  startTick(){
+    if(this.tickId){ try{ this.tickWin.clearInterval(this.tickId); }catch(e){} }
+    // une fenêtre de sortie (visible en plein écran) n'est jamais ralentie : on y héberge l'horloge
+    const o = this.outs.find(Boolean);
+    this.tickWin = o ? o.win : window;
+    this.tickId = this.tickWin.setInterval(() => this.tick(), 100);
+  },
+};
+
+function selectBus(i){
+  const b = Engine.buses[i]; if(!b || Engine.sel === b) return;
+  Engine.sel = b;
+  const big = Engine.big, it = b.item;
+  big.owner = b;
+  if(isReady(it)){ const mv = b.master().video; big.load(it, {startAt: mv && it.type === 'video' ? mv.currentTime : 0, fade: 0, play: !b.paused}); }
+  else big.clear();
+  big.setBlack(b.black, 0);
+  big.setPip(b.pip, getItem(b.pip.itemId), 0);
+  render();
+}
+function pipDialog(bi){
+  const b = Engine.buses[bi], p = b.pip;
+  const ready = state.items.filter(isReady);
+  const seg = (k, opts) => `<div class="seg" data-pk="${k}">${opts.map(([v, l]) => `<button data-v="${v}" class="${String(p[k]) === String(v) ? 'on' : ''}">${l}</button>`).join('')}</div>`;
+  openModal(`PIP — ${b.name}`, `
+    <p class="info">Incrustation par-dessus le <b>${b.name}</b> : par exemple la caméra de l'orateur sur les diapositives. Elle apparaît sur les sorties de ce programme${b.i === 0 ? ', dans la diffusion web et sur les retours présentateur' : ''}.</p>
+    <div class="field"><label>Source du PIP</label><select class="txt" id="pipSrc"><option value="">— choisir —</option>${ready.map(it => `<option value="${it.id}" ${it.id === p.itemId ? 'selected' : ''}>${esc(it.name)} (${typeLabel(it.type)})</option>`).join('')}</select></div>
+    <div class="form2">
+      <div class="field"><label>Position</label>${seg('pos', [['tl', '↖'], ['tr', '↗'], ['c', '●'], ['bl', '↙'], ['br', '↘']])}</div>
+      <div class="field"><label>Taille</label>${seg('size', [[0.2, '20 %'], [0.25, '25 %'], [0.3, '30 %'], [0.4, '40 %'], [0.5, '50 %']])}</div>
+    </div>
+    <div class="row" style="border:0;padding-top:0"><div class="l">Cadre blanc autour du PIP</div><label class="switch"><input type="checkbox" id="pipBorder" ${p.border ? 'checked' : ''}><span></span></label></div>
+    <div class="btnrow"><button class="btn ${p.on ? '' : 'red'} block" id="pipGo">${p.on ? 'Retirer le PIP (fondu)' : 'Afficher le PIP (fondu)'}</button></div>
+    <p class="hint">Raccourci : touche <kbd>I</kbd> pour afficher / retirer le PIP du programme sélectionné. Le son d'une entrée live en PIP sur le PGM 1 s'ouvre automatiquement si son option AFV est active.</p>`);
+  const mb = $('#mBody');
+  mb.querySelectorAll('[data-pk]').forEach(sg => sg.onclick = e => {
+    const bt = e.target.closest('button'); if(!bt) return;
+    const k = sg.dataset.pk; p[k] = k === 'size' ? +bt.dataset.v : bt.dataset.v;
+    sg.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === bt));
+    b.applyPip(200);
+  });
+  $('#pipSrc').onchange = () => { p.itemId = $('#pipSrc').value || null; if(p.on) b.applyPip(300); };
+  $('#pipBorder').onchange = () => { p.border = $('#pipBorder').checked; b.applyPip(0); };
+  $('#pipGo').onclick = () => {
+    if(!p.on && !getItem(p.itemId)){ toast('Choisissez d\'abord la source du PIP.'); return; }
+    p.on = !p.on; b.applyPip(400); pipDialog(bi);
+  };
+}
+function togglePip(){
+  const b = Engine.sel;
+  if(!b.pip.itemId){ pipDialog(b.i); return; }
+  b.pip.on = !b.pip.on; b.applyPip(400);
+}
+// mode RETOUR : le bus b recopie le PGM 1 (retour présentateur)
+function setFollow(b, on){
+  const bus = Engine.buses[b], p1 = Engine.buses[0]; if(!bus || b === 0) return;
+  bus.follow = on;
+  if(on){
+    const it = p1.item, mv = p1.master().video;
+    if(isReady(it)) bus.go(it, 0, mv && it.type === 'video' ? mv.currentTime : 0);
+    if(bus.black !== p1.black) bus.setBlack(p1.black, 0);
+    bus.pip = Object.assign({}, p1.pip); bus.applyPip(0);
+    if(bus.paused !== p1.paused) bus.togglePause();
+    toast(bus.name + ' en mode RETOUR : il suit le PGM 1, avec l\'heure, le temps restant et le média suivant sur ses sorties.');
+  } else toast(bus.name + ' : mode RETOUR désactivé.');
+  savePrefs(); render();
+}
+// affichage « retour présentateur » dans les fenêtres de sortie des bus en mode RETOUR
+function updateRetour(){
+  const p1 = Engine.buses[0], t = busTime(p1), it = p1.item;
+  const nx = nextReady(p1.programId);
+  const rem = t.dur - t.cur;
+  OUTS.forEach(o => {
+    const out = Engine.outs[o]; if(!out || out.win.closed) return;
+    const d = out.win.document, on = Engine.buses[state.route[o]].follow;
+    d.body.classList.toggle('retour', on);
+    if(!on) return;
+    d.getElementById('rtClock').textContent = new Date().toLocaleTimeString('fr-FR');
+    d.getElementById('rtState').textContent = t.st;
+    d.getElementById('rtNow').textContent = it ? it.name : '—';
+    d.getElementById('rtNext').textContent = nx ? nx.name : 'Fin de liste';
+    const r = d.getElementById('rtRem');
+    r.textContent = !it ? '--:--' : isFinite(t.dur) ? '-' + fmt(Math.ceil(rem)) : (it.type === 'live' ? 'LIVE' : fmt(t.cur));
+    r.className = isFinite(t.dur) && rem <= 10 && !(it && it.loop) ? (rem <= 5 ? 'crit' : 'warn') : '';
+  });
+}
+// envoie le bus b sur la destination r (0 = Sortie 1, 1 = Sortie 2, 2 = Diffusion web)
+function setRoute(r, b){
+  if(state.route[r] === b) return;
+  const bus = Engine.buses[b];
+  const mv = bus.master().video;
+  state.route[r] = b;
+  if(r < WEB && Engine.outs[r]){
+    const st = Engine.outs[r].stage, it = bus.item;
+    st.owner = bus;
+    if(isReady(it)) st.load(it, {startAt: mv && it.type === 'video' ? mv.currentTime : 0, fade: state.fadeMs, play: !bus.paused});
+    else st.clear();
+    st.setBlack(bus.black, state.fadeMs);
+    st.setPip(bus.pip, getItem(bus.pip.itemId), state.fadeMs);
+  }
+  routeAudio(); savePrefs(); render();
+  toast(`${ROUTE_NAMES[r]} ← ${bus.name}`);
+}
+// les sorties vidéo sont muettes : tout le son passe par la table de mixage (bus SALLE / WEB)
+function routeAudio(){ Engine.stages().forEach(s => s.applyAudio()); Mixer.syncLive(); }
+
+function animateAuto(ms){
+  const p = $('#autoProg');
+  p.style.transition = 'none'; p.style.width = '0'; void p.offsetWidth;
+  p.style.transition = `width ${ms}ms linear`; p.style.width = '100%';
+  setTimeout(() => { p.style.transition = 'opacity .3s'; p.style.width = '0'; }, ms + 50);
+}
+
+function cuePreview(id){
+  const it = getItem(id);
+  state.previewId = it ? it.id : null;
+  if(isReady(it)) Engine.pvw.load(it, {play: it.type === 'live'});
+  else Engine.pvw.clear();
+  render();
+}
+
+/* ---------- ouverture / fermeture des sorties ---------- */
+function openOutput(idx, sc){
+  closeOutput(idx, true);
+  const bus = Engine.buses[state.route[idx]];
+  const mv = bus.master().video, t = mv ? mv.currentTime : 0;
+  let feat = 'popup=yes';
+  feat += sc ? `,left=${sc.left},top=${sc.top},width=${sc.width},height=${sc.height}` : `,width=1280,height=720,left=${80 + idx * 60},top=${80 + idx * 60}`;
+  const w = window.open('', 'scenepro_sortie' + (idx + 1), feat);
+  if(!w){ toast('La fenêtre de sortie a été bloquée. Autorisez les fenêtres pop-up pour ScènePro.'); return; }
+  const d = w.document; d.open(); d.write(outputHTML(idx + 1)); d.close();
+  if(sc){ try{ w.moveTo(sc.left, sc.top); w.resizeTo(sc.width, sc.height); }catch(e){} }
+  const stage = new Stage(w, d.getElementById('stage'), {output: true, owner: bus});
+  Engine.outs[idx] = {win: w, stage, screen: sc ? sc.label : 'Fenêtre'};
+  routeAudio();
+  const it = bus.item;
+  if(isReady(it)) stage.load(it, {startAt: t, fade: 0, play: !bus.paused});
+  stage.setBlack(bus.black, 0);
+  stage.setPip(bus.pip, getItem(bus.pip.itemId), 0);
+  const hint = d.getElementById('hint'); let ht;
+  const showHint = () => { if(d.fullscreenElement) return; hint.classList.add('on'); d.body.style.cursor = 'default';
+    w.clearTimeout(ht); ht = w.setTimeout(() => { hint.classList.remove('on'); d.body.style.cursor = 'none'; }, 3500); };
+  showHint();
+  d.addEventListener('mousemove', showHint);
+  d.addEventListener('dblclick', () => { stage.unblock(); toggleOutFs(idx); });
+  d.addEventListener('click', () => stage.unblock());
+  d.addEventListener('keydown', onKey);
+  d.addEventListener('fullscreenchange', () => { if(d.fullscreenElement){ hint.classList.remove('on'); d.body.style.cursor = 'none'; } render(); });
+  w.addEventListener('pagehide', () => setTimeout(() => { if(Engine.outs[idx] && Engine.outs[idx].win === w && w.closed) outputClosed(idx); }, 50));
+  Engine.startTick();
+  closeModal();
+  render();
+  toast(`Sortie ${idx + 1} ouverte. Double-cliquez dessus pour la passer en plein écran.`);
+}
+function toggleOutFs(idx){
+  const o = Engine.outs[idx]; if(!o || o.win.closed) return;
+  const d = o.win.document;
+  if(d.fullscreenElement) d.exitFullscreen().catch(()=>{});
+  else d.documentElement.requestFullscreen().catch(() => toast('Double-cliquez directement sur la fenêtre de sortie pour le plein écran.'));
+}
+function closeOutput(idx, silent){
+  const o = Engine.outs[idx];
+  if(o && !o.win.closed){ try{ o.stage.destroy(); }catch(e){} o.win.close(); }
+  if(o) outputClosed(idx, silent);
+}
+function outputClosed(idx, silent){
+  if(!Engine.outs[idx]) return;
+  Engine.outs[idx] = null;
+  routeAudio();
+  Engine.startTick();
+  if(!silent) render();
+}
+const outLive = i => !!(Engine.outs[i] && !Engine.outs[i].win.closed);
+
+async function outputDialog(idx){
+  if(!('getScreenDetails' in window)){ outputDialogRender(idx, null, ''); return; }
+  outputDialogRender(idx, null, '', true);
+  try{
+    const sd = await Promise.race([window.getScreenDetails(), new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 15000))]);
+    const screens = sd.screens.map((s, i) => ({
+      label: s.label || ('Écran ' + (i + 1)), left: s.left, top: s.top, width: s.width, height: s.height,
+      primary: s.isPrimary, internal: s.isInternal, current: s === sd.currentScreen,
+    }));
+    if($('#modal').classList.contains('on')) outputDialogRender(idx, screens, '');
+  }catch(e){
+    if($('#modal').classList.contains('on')) outputDialogRender(idx, null, 'Impossible de lister les écrans (autorisation « Gestion des fenêtres » refusée ou en attente — icône à gauche de la barre d\'adresse).');
+  }
+}
+function outputDialogRender(idx, screens, err, loading){
+  const live = outLive(idx), n = idx + 1;
+  const others = OUTS.filter(k => k !== idx && Engine.outs[k]).map(k => ({k, screen: Engine.outs[k].screen}));
+  const usedBy = label => { const o = others.find(x => x.screen === label); return o ? o.k + 1 : 0; };
+  let html = '';
+  if(live){
+    const fs = !!Engine.outs[idx].win.document.fullscreenElement;
+    html += `<p class="info">La sortie ${n} est <b style="color:var(--red)">EN DIRECT</b> ${fs ? 'en plein écran' : 'en mode fenêtre'}. ${fs ? '' : 'Double-cliquez sur la fenêtre de sortie pour le plein écran.'}</p>
+      <div class="btnrow" style="margin-bottom:18px"><button class="btn" id="oFs">${fs ? 'Quitter le plein écran' : 'Plein écran'}</button><button class="btn danger" id="oClose">Fermer la sortie ${n}</button></div>
+      <div class="flabel">Déplacer la sortie ${n} vers…</div>`;
+  } else {
+    html += `<p class="info">Choisissez l'écran qui reçoit la <b>sortie ${n}</b> (actuellement le <b>PGM ${state.route[idx] + 1}</b>) : vidéoprojecteur, écran HDMI, carte vidéo… Votre bureau reste privé sur l'écran de l'ordinateur.<br>
+      Windows doit être en mode <b>« Étendre »</b> (touches <kbd>Win</kbd> + <kbd>P</kbd>).${others.map(o => ` La sortie ${o.k + 1} est sur « ${esc(o.screen)} ».`).join('')}</p>`;
+  }
+  if(screens){
+    html += '<div class="screens">' + screens.map((s, i) => {
+      const used = usedBy(s.label);
+      const rec = !s.current && !s.internal && !used;
+      return `<div class="scr ${rec ? 'rec' : ''}" data-s="${i}"><div class="ic"></div><b>${esc(s.label)}</b><small>${s.width} × ${s.height}</small>
+        <span class="pill">${s.current ? 'ÉCRAN DE LA RÉGIE' : used ? 'SORTIE ' + used : rec ? 'RECOMMANDÉ' : s.primary ? 'PRINCIPAL' : 'SECONDAIRE'}</span></div>`;
+    }).join('') + `<div class="scr" data-s="win"><div class="ic" style="border-style:dashed"></div><b>Fenêtre libre</b><small>à placer à la main</small><span class="pill">TEST</span></div></div>`;
+    if(screens.length < 2) html += '<p class="hint" style="margin-top:12px">Un seul écran détecté. Branchez le projecteur / la sortie HDMI puis rouvrez cette fenêtre.</p>';
+  } else if(loading){
+    html += `<p class="info">Détection des écrans… <span style="color:var(--dim)">(si le navigateur demande l'autorisation de « gérer les fenêtres », acceptez-la)</span></p>
+      <button class="btn block" id="oOpen">Ouvrir une fenêtre de sortie libre</button>`;
+  } else {
+    html += `${err ? `<div class="warnbox">${err}</div>` : ''}
+      <p class="info">Une fenêtre de sortie va s'ouvrir : faites-la glisser sur l'écran voulu, puis double-cliquez dessus pour la passer en plein écran.</p>
+      <button class="btn red block" id="oOpen">${live ? 'Rouvrir' : 'Ouvrir'} la sortie ${n}</button>`;
+  }
+  openModal(`Sortie vidéo ${n} — Programme`, html);
+  const mb = $('#mBody');
+  mb.querySelectorAll('.scr').forEach(el => el.onclick = () => {
+    const sc = el.dataset.s === 'win' ? null : screens[+el.dataset.s];
+    if(sc) sc.label = sc.label;
+    openOutput(idx, sc);
+    if(sc && Engine.outs[idx]) Engine.outs[idx].screen = sc.label;
+  });
+  if($('#oOpen')) $('#oOpen').onclick = () => openOutput(idx, null);
+  if($('#oFs')) $('#oFs').onclick = () => { toggleOutFs(idx); closeModal(); };
+  if($('#oClose')) $('#oClose').onclick = () => { closeOutput(idx); closeModal(); };
+}
+
+async function audioDeviceDialog(){
+  let devs = [];
+  try{ devs = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'audiooutput'); }catch(e){}
+  const unnamed = devs.some(d => !d.label);
+  const opts = [{deviceId: '', label: 'Périphérique par défaut de Windows'}].concat(devs.filter(d => d.deviceId && d.deviceId !== 'default').map((d, i) => ({deviceId: d.deviceId, label: d.label || ('Sortie audio ' + (i + 1))})));
+  openModal('Sortie audio SALLE', `
+    <p class="info">Le son du <b>PGM 1</b> et des micros passe par la table de mixage. Le master <b>SALLE</b> sort sur le périphérique choisi ici (sono, HDMI du projecteur, carte son USB…). Le master <b>WEB</b> part dans la diffusion en ligne.</p>
+    <div class="field"><label>Périphérique audio du master SALLE</label>
+      <select class="txt" id="aoDev">${opts.map(o => `<option value="${esc(o.deviceId)}" ${o.deviceId === Mixer.sink ? 'selected' : ''}>${esc(o.label)}</option>`).join('')}</select>
+      <div class="hint">${unnamed ? 'Les noms des périphériques s\'affichent après avoir ajouté une entrée audio ou live (autorisation micro).' : ''}</div></div>
+    <button class="btn primary block" id="aoOk">Appliquer</button>`);
+  $('#aoOk').onclick = () => { Mixer.setSink($('#aoDev').value); closeModal(); toast('Sortie audio SALLE appliquée.'); };
+}
+
+/* ---------- table de mixage : interface ---------- */
+let lowerTab = 'bin';
+function setLowerTab(t){
+  lowerTab = t;
+  $('#bin').style.display = t === 'bin' ? '' : 'none';
+  $('#mixer').style.display = t === 'mix' ? '' : 'none';
+  document.querySelectorAll('#lowTabs button').forEach(b => b.classList.toggle('on', b.dataset.t === t));
+  $('#btnAdd').style.display = $('#btnAddLive').style.display = $('#upNext').style.display = t === 'bin' ? '' : 'none';
+  $('#btnAddMic').style.display = t === 'mix' ? '' : 'none';
+  if(t === 'mix'){ Mixer.init(); Mixer.syncLive(); renderMixer(true); }
+}
+const fmtDb = db => db <= -60 ? '-∞' : (db > 0 ? '+' : '') + db.toFixed(1);
+function renderMixer(force){
+  const box = $('#strips'); if(!box) return;
+  if(!Mixer.ctx){ box.innerHTML = '<p class="hint" style="padding:12px">Cliquez n\'importe où pour activer l\'audio.</p>'; return; }
+  const sig = Mixer.chans.map(c => c.id + c.name).join('|');
+  if(!force && sig === Mixer.sig) return;
+  Mixer.sig = sig;
+  const kindLbl = {media: 'MÉDIAS', live: 'LIVE', input: 'MICRO / LIGNE'};
+  const strip = (c, master) => `
+    <div class="strip ${master ? 'master' : 'k-' + c.kind}" data-ch="${master ? 'm:' + c.key : c.id}">
+      <div class="sname" title="${esc(c.name)}">${esc(c.name)}</div>
+      <div class="skind">${master ? (c.key === 'salle' ? 'MASTER · SONO' : 'MASTER · DIFFUSION') : kindLbl[c.kind]}</div>
+      <div class="sfader">
+        <div class="meters">${master ? '<div class="meter"><i></i></div><div class="meter"><i></i></div>' : '<div class="meter"><i></i></div>'}</div>
+        <input type="range" class="fader" min="-60" max="10" step="0.5" value="${c.db}">
+      </div>
+      <div class="sdb">${fmtDb(c.db)} dB</div>
+      <div class="sbtns">
+        <button data-a="mute" class="b-mute ${c.mute ? 'on' : ''}">MUTE</button>
+        ${master ? '' : `<button data-a="salle" class="b-route ${c.salle ? 'on' : ''}" title="Envoyer vers le master SALLE">SALLE</button><button data-a="web" class="b-route ${c.web ? 'on' : ''}" title="Envoyer vers le master WEB">WEB</button>`}
+        ${c.kind === 'live' ? `<button data-a="afv" class="b-afv ${c.afv ? 'on' : ''}" title="Audio-follow-video : le son ne s'ouvre que lorsque l'entrée est à l'antenne sur le PGM 1">AFV</button>` : ''}
+        ${c.kind === 'input' ? '<button data-a="del" class="b-del" title="Retirer cette entrée">✕</button>' : ''}
+      </div>
+    </div>`;
+  box.innerHTML = Mixer.chans.map(c => strip(c, false)).join('') + '<div class="strip-sep"></div>' + strip(Mixer.masters.salle, true) + strip(Mixer.masters.web, true);
+  box.querySelectorAll('.strip').forEach(el => {
+    const key = el.dataset.ch;
+    const c = key.startsWith('m:') ? Mixer.masters[key.slice(2)] : Mixer.chans.find(x => x.id === key);
+    const apply = () => { c.master ? Mixer.applyMaster(c) : Mixer.apply(c); Mixer.save(); };
+    const f = el.querySelector('.fader');
+    f.oninput = () => { c.db = +f.value; el.querySelector('.sdb').textContent = fmtDb(c.db) + ' dB'; apply(); };
+    f.ondblclick = () => { c.db = 0; f.value = 0; f.oninput(); };
+    el.querySelectorAll('[data-a]').forEach(b => b.onclick = () => {
+      const a = b.dataset.a;
+      if(a === 'del'){ if(confirm('Retirer « ' + c.name + ' » de la table de mixage ?')){ Mixer.remove(c.id); renderMixer(true); } return; }
+      c[a] = !c[a]; b.classList.toggle('on', c[a]);
+      if(a === 'salle' && c[a] && c.kind === 'input') toast('Attention à l\'effet Larsen : un micro de la salle envoyé dans la sono de la salle peut siffler.');
+      apply();
+    });
+  });
+}
+// vumètres (rafraîchis en continu)
+function meterLoop(){
+  requestAnimationFrame(meterLoop);
+  if(!Mixer.ctx) return;
+  const pct = p => { const db = p > 0 ? 20 * Math.log10(p) : -100; return clamp((db + 60) / 63 * 100, 0, 100); };
+  const vu = $('#pgmVu');
+  if(vu){ const m = Mixer.masters.salle, is = vu.querySelectorAll('i');
+    is[0].style.width = (100 - pct(Mixer.level(m.anL))) + '%'; is[1].style.width = (100 - pct(Mixer.level(m.anR))) + '%'; }
+  if(lowerTab !== 'mix') return;
+  document.querySelectorAll('#strips .strip').forEach(el => {
+    const key = el.dataset.ch, ms = el.querySelectorAll('.meter i');
+    if(key.startsWith('m:')){ const m = Mixer.masters[key.slice(2)]; [m.anL, m.anR].forEach((an, k) => { const p = Mixer.level(an); ms[k].style.height = (100 - pct(p)) + '%'; ms[k].parentNode.classList.toggle('clip', p >= 0.99); }); }
+    else { const c = Mixer.chans.find(x => x.id === key); if(!c) return; const p = Mixer.level(c.an); ms[0].style.height = (100 - pct(p)) + '%'; ms[0].parentNode.classList.toggle('clip', p >= 0.99); }
+  });
+}
+async function addMicDialog(){
+  Mixer.init();
+  openModal('Ajouter une entrée audio', '<p class="info">Recherche des micros et entrées audio… acceptez l\'autorisation micro si le navigateur la demande.</p>');
+  try{ const tmp = await navigator.mediaDevices.getUserMedia({audio: true}); tmp.getTracks().forEach(t => t.stop()); }
+  catch(e){ $('#mBody').innerHTML = `<div class="warnbox">Accès au micro impossible : ${esc(e.message)}</div>`; return; }
+  const auds = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'audioinput' && d.deviceId !== 'default' && d.deviceId !== 'communications');
+  if(!auds.length){ $('#mBody').innerHTML = '<div class="warnbox">Aucune entrée audio détectée.</div>'; return; }
+  openModal('Ajouter une entrée audio', `
+    <div class="field"><label>Périphérique (micro, carte son, console)</label><select class="txt" id="amDev">${auds.map((d, i) => `<option value="${esc(d.deviceId)}">${esc(d.label || 'Entrée ' + (i + 1))}</option>`).join('')}</select>
+      <div class="hint" id="amInfo">Analyse du périphérique…</div></div>
+    <div class="field"><label>Utilisation des entrées</label>
+      <div class="seg" id="amMode"><button data-v="split" class="on">Une tranche par entrée</button><button data-v="stereo">Une tranche stéréo</button></div>
+      <div class="hint" id="amModeHint"></div></div>
+    <div class="field"><label>Nom</label><input class="txt" id="amName"></div>
+    <div id="amChans"></div>
+    <p class="hint">Les traitements automatiques (annulation d'écho, réduction de bruit) sont désactivés pour un son naturel. Par défaut un micro part vers le <b>WEB</b> seulement (pas dans la sono de la salle, pour éviter l'effet Larsen) : modifiable sur chaque tranche.</p>
+    <button class="btn primary block" id="amOk">${I.plus} Ajouter à la table de mixage</button>`);
+  let probe = null, nch = 2;
+  const nm = () => { const d = auds.find(a => a.deviceId === $('#amDev').value); if(!$('#amName').dataset.touched) $('#amName').value = d && d.label ? d.label.replace(/\s*\(.*?\)\s*/g, ' ').trim().slice(0, 28) : 'Micro'; };
+  const mode = () => $('#amMode .on').dataset.v;
+  const drawChans = () => {
+    const split = mode() === 'split';
+    $('#amModeHint').textContent = split ? `Chaque entrée de la carte (micro 1, micro 2…) aura son propre fader, mute et vumètre.` : 'Les entrées sont gardées ensemble (gauche / droite) : idéal pour une console de mixage ou un lecteur.';
+    $('#amChans').innerHTML = split ? `<div class="field"><label>Entrées à ajouter</label><div style="display:flex;flex-wrap:wrap;gap:6px">${Array.from({length: nch}, (_, k) =>
+      `<label class="btn sm" style="gap:6px"><input type="checkbox" data-ch="${k}" checked> Entrée ${k + 1}</label>`).join('')}</div></div>` : '';
+  };
+  const analyse = async () => {
+    nm();
+    if(probe){ probe.getTracks().forEach(t => t.stop()); probe = null; }
+    $('#amInfo').textContent = 'Analyse du périphérique…';
+    try{
+      probe = await openAudioDevice($('#amDev').value);
+      if(!$('#amDev')){ probe.getTracks().forEach(t => t.stop()); return; }
+      const st = probe.getAudioTracks()[0].getSettings();
+      nch = Math.max(1, st.channelCount || 2);
+      $('#amInfo').innerHTML = `<b>${nch} entrée${nch > 1 ? 's' : ''}</b> disponible${nch > 1 ? 's' : ''} sur ce périphérique${st.sampleRate ? ' · ' + (st.sampleRate / 1000) + ' kHz' : ''}.` +
+        (nch <= 2 ? ' Si votre carte a plus d\'entrées, Windows les présente souvent par paires (« Entrées 1-2 », « Entrées 3-4 »…) : ajoutez chaque paire.' : '');
+      if(nch === 1){ $('#amMode').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.v === 'stereo')); }
+    }catch(e){ $('#amInfo').textContent = 'Impossible d\'ouvrir ce périphérique : ' + e.message; }
+    drawChans();
+  };
+  Modal.onClose = () => { if(probe && !Mixer.chans.some(c => c.stream === probe)) probe.getTracks().forEach(t => t.stop()); probe = null; };
+  $('#amDev').onchange = analyse; $('#amName').oninput = () => $('#amName').dataset.touched = '1';
+  $('#amMode').onclick = e => { const b = e.target.closest('button'); if(!b) return; $('#amMode').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); drawChans(); };
+  analyse();
+  $('#amOk').onclick = async () => {
+    const deviceId = $('#amDev').value, name = $('#amName').value.trim() || 'Micro';
+    try{
+      const s = probe || await openAudioDevice(deviceId);
+      if(mode() === 'split' && nch > 1){
+        const ks = [...document.querySelectorAll('#amChans [data-ch]:checked')].map(c => +c.dataset.ch);
+        if(!ks.length){ toast('Cochez au moins une entrée.'); return; }
+        ks.forEach(k => Mixer.ensure({id: 'in-' + uid(), kind: 'input', name: `${name} · E${k + 1}`, deviceId, chan: k, stream: s}));
+      } else Mixer.ensure({id: 'in-' + uid(), kind: 'input', name, deviceId, chan: null, stream: s});
+      probe = null; Mixer.save(); closeModal(); setLowerTab('mix');
+    }catch(e){ toast('Impossible d\'ouvrir cette entrée : ' + e.message); }
+  };
+}
+
+/* ---------------- Médias ---------------- */
+const VEXT = ['mp4','m4v','webm','mov','mkv','ogv','avi'], IEXT = ['jpg','jpeg','png','webp','gif','bmp','svg','avif'];
+function detectType(file){
+  const t = file.type || '', ext = (file.name.split('.').pop() || '').toLowerCase();
+  if(t.startsWith('video/') || VEXT.includes(ext)) return 'video';
+  if(t.startsWith('image/') || IEXT.includes(ext)) return 'image';
+  return null;
+}
+function baseItem(extra){
+  return Object.assign({ id: uid(), name: '', fileName: '', type: 'image', file: null, handle: null,
+    thumb: null, duration: null, w: null, h: null,
+    loop: false, audio: true, volume: 1, imageDuration: 0, endAction: 'hold', transition: 'fade', status: 'ready' }, extra);
+}
+function addEntries(entries){
+  entries = entries.filter(e => e.file);
+  entries.sort((a, b) => a.file.name.localeCompare(b.file.name, 'fr', {numeric: true}));
+  let added = 0, skipped = 0, firstId = null;
+  for(const {file, handle} of entries){
+    const type = detectType(file);
+    if(!type){ skipped++; continue; }
+    const it = baseItem({ name: file.name.replace(/\.[^.]+$/, ''), fileName: file.name, type, file, handle: handle || null });
+    state.items.push(it); added++; if(!firstId) firstId = it.id;
+    queueThumb(it);
+  }
+  if(skipped) toast(skipped + ' fichier(s) ignoré(s) : format non reconnu.');
+  if(added && !state.previewId) cuePreview(firstId);
+  render(); save();
+}
+async function pickFiles(){
+  if('showOpenFilePicker' in window){
+    try{
+      const hs = await window.showOpenFilePicker({multiple: true, id: 'scenepro-media', types: [{description: 'Vidéos et images',
+        accept: {'video/*': VEXT.map(e => '.' + e), 'image/*': IEXT.map(e => '.' + e)}}]});
+      const entries = [];
+      for(const h of hs) entries.push({handle: h, file: await h.getFile()});
+      addEntries(entries);
+    }catch(e){ if(e.name !== 'AbortError') toast('Erreur : ' + e.message); }
+  } else $('#fileIn').click();
+}
+$('#fileIn').onchange = e => { addEntries([...e.target.files].map(f => ({file: f}))); e.target.value = ''; };
+
+const thumbQ = []; let thumbBusy = false;
+function queueThumb(it){ thumbQ.push(it); if(!thumbBusy) runThumbs(); }
+async function runThumbs(){
+  thumbBusy = true;
+  while(thumbQ.length){ const it = thumbQ.shift(); if(isReady(it)) { try{ await makeThumb(it); }catch(e){} renderBin(); save(); } }
+  thumbBusy = false;
+}
+function makeThumb(it){
+  return new Promise(res => {
+    const url = URL.createObjectURL(it.file);
+    const cv = document.createElement('canvas'); cv.width = 320; cv.height = 180;
+    const g = cv.getContext('2d');
+    const draw = (src, w, h) => {
+      g.fillStyle = '#000'; g.fillRect(0, 0, 320, 180);
+      const k = Math.min(320 / w, 180 / h); const dw = w * k, dh = h * k;
+      try{ g.drawImage(src, (320 - dw) / 2, (180 - dh) / 2, dw, dh); it.thumb = cv.toDataURL('image/jpeg', .78); }catch(e){}
+    };
+    const done = () => { URL.revokeObjectURL(url); res(); };
+    const to = setTimeout(done, 8000);
+    if(it.type === 'image'){
+      const im = new Image();
+      im.onload = () => { it.w = im.naturalWidth; it.h = im.naturalHeight; draw(im, it.w || 320, it.h || 180); clearTimeout(to); done(); };
+      im.onerror = () => { clearTimeout(to); done(); };
+      im.src = url;
+    } else {
+      const v = document.createElement('video'); v.muted = true; v.preload = 'auto';
+      v.onloadedmetadata = () => { it.duration = v.duration; it.w = v.videoWidth; it.h = v.videoHeight; v.currentTime = Math.min(1.5, v.duration * 0.15 || 0); };
+      v.onseeked = () => { draw(v, v.videoWidth || 320, v.videoHeight || 180); clearTimeout(to); v.removeAttribute('src'); v.load(); done(); };
+      v.onerror = () => { clearTimeout(to); it.error = true; done(); };
+      v.src = url;
+    }
+  });
+}
+function removeItem(id){
+  if(Engine.buses.some(b => b.programId === id || (b.pip.on && b.pip.itemId === id))){ toast('Impossible de retirer un média à l\'antenne (programme ou PIP).'); return; }
+  const idx = state.items.findIndex(i => i.id === id); if(idx < 0) return;
+  const it = state.items[idx];
+  if(id === state.previewId){ const n = state.items[idx + 1] || state.items[idx - 1]; cuePreview(n ? n.id : null); }
+  Engine.stages().concat(Engine.pvw).forEach(s => s.forget(id));
+  if(it.type === 'live') Inputs.close(id);
+  state.items.splice(idx, 1);
+  render(); save();
+}
+async function unlock(it, ask){
+  if(it.type === 'live'){ return Inputs.open(it); }
+  if(!it.handle) return false;
+  try{
+    let p = await it.handle.queryPermission({mode: 'read'});
+    if(p !== 'granted' && ask) p = await it.handle.requestPermission({mode: 'read'});
+    if(p === 'granted'){ it.file = await it.handle.getFile(); it.status = 'ready'; return true; }
+  }catch(e){ if(e.name === 'NotFoundError'){ it.status = 'missing'; } }
+  return false;
+}
+async function unlockAll(){
+  for(const it of state.items.filter(i => i.status === 'locked')){
+    const ok = await unlock(it, true);
+    if(!ok && it.status === 'locked' && it.type !== 'live') break;
+  }
+  if(!isReady(pvwItem())){ const f = state.items.find(isReady); if(f) cuePreview(f.id); }
+  render();
+}
+
+/* ---------- entrée live : dialogue ---------- */
+async function addLiveDialog(){
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){ toast('Les entrées live nécessitent de lancer ScènePro avec « Lancer ScenePro.bat ».'); return; }
+  openModal('Ajouter une entrée live', '<p class="info">Recherche des cartes de capture et caméras… acceptez l\'autorisation caméra / micro si le navigateur la demande.</p>');
+  try{
+    const tmp = await navigator.mediaDevices.getUserMedia({video: true, audio: true}).catch(() => navigator.mediaDevices.getUserMedia({video: true}));
+    tmp.getTracks().forEach(t => t.stop());
+  }catch(e){
+    $('#mBody').innerHTML = `<div class="warnbox">Accès aux périphériques vidéo impossible : ${esc(e.message)}.<br>Vérifiez que la carte de capture est branchée et que l'autorisation caméra est accordée (icône à gauche de la barre d'adresse).</div>`;
+    return;
+  }
+  const devs = await navigator.mediaDevices.enumerateDevices();
+  const vids = devs.filter(d => d.kind === 'videoinput'), auds = devs.filter(d => d.kind === 'audioinput' && d.deviceId !== 'default' && d.deviceId !== 'communications');
+  if(!vids.length){ $('#mBody').innerHTML = '<div class="warnbox">Aucune carte de capture ou caméra détectée.</div>'; return; }
+  const guessAudio = vid => { const words = (vid.label || '').toLowerCase().replace(/\(.*?\)/g, '').split(/\s+/).filter(w => w.length > 3);
+    const a = auds.find(a => words.some(w => a.label.toLowerCase().includes(w))); return a ? a.deviceId : ''; };
+  openModal('Ajouter une entrée live', `
+    <div class="form2">
+      <div><video class="livepv" id="lvPv" muted playsinline autoplay></video><div class="hint" id="lvInfo">Aperçu</div></div>
+      <div>
+        <div class="field"><label>Source vidéo</label><select class="txt" id="lvV">${vids.map((d, i) => `<option value="${esc(d.deviceId)}">${esc(d.label || 'Caméra ' + (i + 1))}</option>`).join('')}</select></div>
+        <div class="field"><label>Résolution</label><select class="txt" id="lvR"><option value="1920x1080">1080p (1920×1080)</option><option value="1280x720">720p (1280×720)</option><option value="3840x2160">4K (si la carte le permet)</option></select></div>
+        <div class="field"><label>Son de l'entrée</label><select class="txt" id="lvA"><option value="">Aucun son</option>${auds.map((d, i) => `<option value="${esc(d.deviceId)}">${esc(d.label || 'Entrée audio ' + (i + 1))}</option>`).join('')}</select>
+          <div class="hint">Une carte de capture HDMI apparaît souvent aussi comme entrée audio du même nom.</div></div>
+        <div class="field"><label>Nom</label><input class="txt" id="lvN"></div>
+      </div>
+    </div>
+    <div class="btnrow"><button class="btn primary block" id="lvOk">${I.plus} Ajouter l'entrée live</button></div>`);
+  let pv = null;
+  const upd = async () => {
+    const vSel = $('#lvV'); const vid = vids.find(v => v.deviceId === vSel.value);
+    if(!$('#lvN').dataset.touched) $('#lvN').value = (vid && vid.label ? vid.label.replace(/\s*\(.*?\)\s*/g, ' ').trim() : 'Entrée live');
+    if(pv){ pv.getTracks().forEach(t => t.stop()); pv = null; }
+    const [w, h] = $('#lvR').value.split('x');
+    try{
+      pv = await navigator.mediaDevices.getUserMedia({video: {deviceId: {exact: vSel.value}, width: {ideal: +w}, height: {ideal: +h}}});
+      if(!$('#lvPv')) { pv.getTracks().forEach(t => t.stop()); return; }
+      $('#lvPv').srcObject = pv;
+      const st = pv.getVideoTracks()[0].getSettings();
+      $('#lvInfo').textContent = `Signal reçu : ${st.width}×${st.height}${st.frameRate ? ' · ' + Math.round(st.frameRate) + ' i/s' : ''}`;
+    }catch(e){ $('#lvInfo').textContent = 'Pas de signal : ' + e.message; }
+  };
+  $('#lvV').onchange = () => { $('#lvA').value = guessAudio(vids.find(v => v.deviceId === $('#lvV').value) || {}); upd(); };
+  $('#lvR').onchange = upd;
+  $('#lvN').oninput = () => $('#lvN').dataset.touched = '1';
+  $('#lvA').value = guessAudio(vids[0]);
+  upd();
+  const stopPv = () => { if(pv){ pv.getTracks().forEach(t => t.stop()); pv = null; } };
+  Modal.onClose = stopPv;
+  $('#lvOk').onclick = async () => {
+    stopPv();
+    const [w, h] = $('#lvR').value.split('x');
+    const it = baseItem({ type: 'live', name: $('#lvN').value.trim() || 'Entrée live', deviceId: $('#lvV').value, audioId: $('#lvA').value, resW: +w, resH: +h, status: 'locked' });
+    it.audio = !!it.audioId;
+    const ok = await Inputs.open(it);
+    if(!ok){ toast('Impossible d\'ouvrir l\'entrée : ' + it.err); return; }
+    state.items.push(it);
+    closeModal();
+    cuePreview(it.id); save();
+    toast('Entrée live ajoutée : « ' + it.name + ' ».');
+  };
+}
+
+/* ---------------- Sauvegarde (IndexedDB) ---------------- */
+const DB = (() => {
+  let p;
+  const db = () => p || (p = new Promise((res, rej) => {
+    const r = indexedDB.open('scenepro', 1);
+    r.onupgradeneeded = () => { r.result.createObjectStore('kv'); r.result.createObjectStore('shows'); };
+    r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+  }));
+  const tx = async (st, mode, fn) => { const d = await db(); return new Promise((res, rej) => {
+    const t = d.transaction(st, mode); const r = fn(t.objectStore(st));
+    t.oncomplete = () => res(r && r.result); t.onerror = () => rej(t.error); }); };
+  return {
+    get: (st, k) => tx(st, 'readonly', s => s.get(k)),
+    put: (st, k, v) => tx(st, 'readwrite', s => s.put(v, k)),
+    del: (st, k) => tx(st, 'readwrite', s => s.delete(k)),
+    all: st => tx(st, 'readonly', s => s.getAll()),
+  };
+})();
+const FIELDS = ['id','name','fileName','type','handle','thumb','duration','w','h','loop','audio','volume','imageDuration','endAction','transition','deviceId','audioId','resW','resH'];
+function serialize(){
+  return { name: state.showName, fadeMs: state.fadeMs, savedAt: Date.now(),
+    items: state.items.filter(i => i.handle || i.type === 'live').map(i => Object.fromEntries(FIELDS.map(f => [f, i[f]]))) };
+}
+let saveT;
+function save(){ clearTimeout(saveT); saveT = setTimeout(() => { DB.put('kv', 'current', serialize()).catch(()=>{}); }, 400); }
+function savePrefs(){ DB.put('kv', 'prefs', {route: state.route.slice(), fadeMs: state.fadeMs, follow: Engine.buses.map(b => b.follow)}).catch(()=>{}); }
+async function restore(data){
+  if(!data) return;
+  Engine.stages().forEach(s => s.clear());
+  Engine.buses.forEach(b => { b.programId = null; b.black = false; b.paused = false; });
+  Engine.stages().forEach(s => s.setBlack(false, 0));
+  Engine.stages().concat(Engine.pvw).forEach(s => [...s.urls.keys()].forEach(id => s.forget(id)));
+  state.items.filter(i => i.type === 'live').forEach(i => Inputs.close(i.id));
+  state.showName = data.name || 'Sans titre';
+  state.fadeMs = data.fadeMs || 1000;
+  state.items = (data.items || []).map(s => ({...s, file: null, status: 'locked'}));
+  state.previewId = null;
+  Engine.pvw.clear();
+  await Promise.all(state.items.filter(i => i.type !== 'live').map(it => unlock(it, false)));
+  for(const it of state.items.filter(i => i.type === 'live')){
+    try{ const p = await navigator.permissions.query({name: 'camera'}); if(p.state === 'granted') await Inputs.open(it); }catch(e){}
+  }
+  const f = state.items.find(isReady); if(f) cuePreview(f.id);
+  render();
+}
+
+/* =========================================================
+   DIFFUSION EN LIGNE — envoi du programme WEB au poste Diffusion
+   La régie compose l'image du bus WEB (+ PIP, synthés web, noir) et le son du master WEB,
+   et l'envoie au serveur local (/live) qui la relaie aux postes Diffusion (station.js,
+   sur cet ordinateur ou un autre). Le poste Diffusion gère tout le reste : plateformes,
+   clés de stream, encodage, enregistrement (REC). La régie affiche son retour d'état.
+   ========================================================= */
+const RES = {'480': [854, 480], '720': [1280, 720], '1080': [1920, 1080]};
+// durée au format 00h30m52s
+function hms(ms){ let s = Math.max(0, Math.floor((ms || 0) / 1000)); const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60); s %= 60; return String(h).padStart(2, '0') + 'h' + String(m).padStart(2, '0') + 'm' + String(s).padStart(2, '0') + 's'; }
+
+const Live = {
+  // retour d'état du poste Diffusion
+  status: 'idle',     // idle | connecting | live | reconnecting | error | lost (poste parti pendant la diffusion)
+  remote: null, stations: 0, kbpsNow: 0, rcvAt: 0, linked: false,
+  // envoi du programme
+  ws: null, rec: null, canvas: null, g: null, worker: null, timerFallback: null, sending: false, gen: 0, mime: '',
+  want: {res: '720', fps: 30}, composed: 0, retryT: null,
+
+  check(){ this.connect(); },
+  connect(){
+    if(!/^https?:/.test(location.protocol) || this.ws) return;
+    let ws; try{ ws = new WebSocket(`ws://${location.host}/live`); }catch(e){ return; }
+    this.ws = ws;
+    ws.onopen = () => { this.linked = true; };
+    ws.onmessage = e => {
+      let m; try{ m = JSON.parse(e.data); }catch(err){ return; }
+      if(m.type === 'stations'){ this.stations = m.n || 0; if(m.want) this.setWant(m.want, false); this.syncSending(); }
+      else if(m.type === 'feed-restart'){ if(this.sending) this.restartRecorder(); }
+      else if(m.type === 'want') this.setWant(m, true);
+      else if(m.type === 'route'){ const b = clamp((+m.bus || 1) - 1, 0, NBUS - 1); if(state.route[WEB] !== b){ setRoute(WEB, b); render(); } }
+      else if(m.type === 'stream') this.onRemote(m);
+    };
+    ws.onclose = () => {
+      if(this.ws !== ws) return;
+      this.ws = null; this.linked = false; this.stations = 0; this.stopSending();
+      this.onRemote(null);
+      clearTimeout(this.retryT); this.retryT = setTimeout(() => this.connect(), 2000);
+    };
+  },
+  setWant(w, restart){
+    const res = RES[w.res] ? String(w.res) : '720', fps = clamp(+w.fps || 30, 15, 60);
+    if(res === this.want.res && fps === this.want.fps) return;
+    this.want = {res, fps};
+    if(restart && this.sending){ this.stopSending(); this.startSending(); }
+  },
+  syncSending(){
+    if(this.stations > 0 && !this.sending) this.startSending();
+    else if(!this.stations && this.sending) this.stopSending();
+  },
+  startSending(){
+    Mixer.init(); Mixer.resume();
+    this.startCompositor();
+    this.sending = this.startRecorder();
+  },
+  stopSending(){ this.gen++; this.stopRecorder(); this.stopCompositor(); this.sending = false; },
+  startCompositor(){
+    const [W, H] = RES[this.want.res] || RES['720'];
+    if(!this.canvas){ this.canvas = document.createElement('canvas'); }
+    this.canvas.width = W; this.canvas.height = H;
+    this.g = this.canvas.getContext('2d', {alpha: false});
+    this.g.fillStyle = '#000'; this.g.fillRect(0, 0, W, H);
+    const fps = this.want.fps;
+    try{
+      if(!this.worker){
+        const src = 'let t;onmessage=e=>{clearInterval(t);if(e.data>0)t=setInterval(()=>postMessage(0),e.data)}';
+        this.worker = new Worker(URL.createObjectURL(new Blob([src], {type: 'text/javascript'})));
+        this.worker.onmessage = () => this.draw();
+      }
+      this.worker.postMessage(1000 / fps);
+    }catch(e){ clearInterval(this.timerFallback); this.timerFallback = setInterval(() => this.draw(), 1000 / fps); }
+  },
+  stopCompositor(){
+    if(this.worker) this.worker.postMessage(0);
+    if(this.timerFallback){ clearInterval(this.timerFallback); this.timerFallback = null; }
+  },
+  draw(){
+    const g = this.g, W = this.canvas.width, H = this.canvas.height, st = Engine.buses[state.route[WEB]].mini;
+    g.globalAlpha = 1; g.fillStyle = '#000'; g.fillRect(0, 0, W, H);
+    for(const layer of st.el.querySelectorAll('.layer')){
+      const m = layer.firstChild; if(!m) continue;
+      const op = parseFloat(getComputedStyle(layer).opacity); if(!(op > 0)) continue;
+      let w, h;
+      if(m.tagName === 'VIDEO'){ if(m.readyState < 2) continue; w = m.videoWidth; h = m.videoHeight; }
+      else { if(!m.complete || !m.naturalWidth) continue; w = m.naturalWidth; h = m.naturalHeight; }
+      if(!w || !h) continue;
+      const k = Math.min(W / w, H / h);
+      g.globalAlpha = op;
+      try{ g.drawImage(m, (W - w * k) / 2, (H - h * k) / 2, w * k, h * k); }catch(e){}
+    }
+    // PIP
+    const pe = st.pipEl, pm = pe && pe.firstChild;
+    if(pm){
+      const op = parseFloat(getComputedStyle(pe).opacity);
+      const sr = st.el.getBoundingClientRect(), pr = pe.getBoundingClientRect();
+      if(op > 0 && sr.width){
+        const x = (pr.left - sr.left) / sr.width * W, y = (pr.top - sr.top) / sr.height * H, w = pr.width / sr.width * W, h = pr.height / sr.height * H;
+        let mw, mh, ok = true;
+        if(pm.tagName === 'VIDEO'){ ok = pm.readyState >= 2; mw = pm.videoWidth; mh = pm.videoHeight; } else { ok = pm.complete; mw = pm.naturalWidth; mh = pm.naturalHeight; }
+        if(ok && mw && mh){
+          g.globalAlpha = op;
+          const k = Math.max(w / mw, h / mh), sw = w / k, sh = h / k; // recadrage « cover »
+          try{ g.drawImage(pm, (mw - sw) / 2, (mh - sh) / 2, sw, sh, x, y, w, h); }catch(e){}
+          if(!pe.classList.contains('noborder')){ g.strokeStyle = 'rgba(255,255,255,.9)'; g.lineWidth = Math.max(2, W / 640); g.strokeRect(x, y, w, h); }
+        }
+      }
+    }
+    // habillage du poste Synthé : éléments dont la cible WEB est cochée
+    if(Gfx.ready){ g.globalAlpha = 1; try{ Gfx.scene.draw(g, W, H, performance.now(), Gfx.filter('web')); }catch(e){} }
+    const b = parseFloat(getComputedStyle(st.blk).opacity);
+    if(b > 0){ g.globalAlpha = b; g.fillStyle = '#000'; g.fillRect(0, 0, W, H); }
+    g.globalAlpha = 1;
+    this.composed++;
+  },
+  startRecorder(){
+    const gen = ++this.gen;
+    const stream = this.canvas.captureStream(this.want.fps);
+    if(Mixer.dest){ const at = Mixer.dest.stream.getAudioTracks()[0]; if(at) stream.addTrack(at); }
+    const types = ['video/webm;codecs=h264,opus', 'video/webm;codecs=vp8,opus', 'video/webm'];
+    const mime = this.mime = types.find(t => MediaRecorder.isTypeSupported(t)) || '';
+    const [W, H] = RES[this.want.res] || RES['720'];
+    try{
+      // débit élevé : c'est un signal de liaison (réseau local), le poste Diffusion réencode ensuite
+      // une image clé par seconde : un poste qui se connecte en cours de route démarre vite
+      this.rec = new MediaRecorder(stream, {mimeType: mime, videoBitsPerSecond: W >= 1920 ? 14e6 : 9e6, audioBitsPerSecond: 192000, videoKeyFrameIntervalDuration: 1000});
+    }catch(e){ toast('Envoi vers le poste Diffusion impossible : ' + e.message); return false; }
+    const ws = this.ws;
+    if(!ws || ws.readyState !== 1) return false;
+    ws.send(JSON.stringify({type: 'init', mime, w: W, h: H, fps: this.want.fps}));
+    this.rec.ondataavailable = ev => {
+      if(gen !== this.gen || !ev.data || !ev.data.size || this.ws !== ws || ws.readyState !== 1) return;
+      if(ws.bufferedAmount > 64e6) return; // serveur local saturé : on saute plutôt que d'accumuler
+      ws.send(ev.data);
+    };
+    this.rec.start(250);
+    return true;
+  },
+  restartRecorder(){ this.stopRecorder(); this.sending = this.startRecorder(); },
+  stopRecorder(){ if(this.rec){ const r = this.rec; this.rec = null; try{ if(r.state !== 'inactive') r.stop(); }catch(e){} } },
+
+  // commandes envoyées au poste Diffusion
+  cmd(c){
+    if(!this.ws || this.ws.readyState !== 1){ toast('Diffusion indisponible : le serveur local ScènePro ne répond pas.'); return; }
+    if(!this.stations){ toast('Aucun poste Diffusion connecté : ouvrez « ScènePro Diffusion » (sur cet ordinateur ou un autre).'); return; }
+    this.ws.send(JSON.stringify({type: 'cmd', cmd: c}));
+  },
+  start(){ this.cmd('stream-start'); },
+  stop(){ this.cmd('stream-stop'); },
+  recOn(){ return !!this.remote && this.remote.rec && (this.remote.rec.status === 'rec' || this.remote.rec.status === 'waitfeed'); },
+  onAirOrPending(){ return ['live', 'connecting', 'reconnecting'].includes(this.status); },
+
+  onRemote(m){
+    this.remote = m; this.rcvAt = Date.now();
+    if(!m){ this.status = this.status !== 'idle' && this.status !== 'error' ? 'lost' : 'idle'; this.kbpsNow = 0; }
+    else { this.stations = m.stations || 0; this.status = m.status || 'idle'; this.kbpsNow = m.kbps || 0; }
+    renderLivePill(); updateStatsUI();
+  },
+  health(){ return this.status === 'live' ? (this.remote && this.remote.health) || 'good' : null; },
+  uptime(){ return this.remote && this.remote.uptime ? this.remote.uptime + (Date.now() - this.rcvAt) : 0; },
+  recUptime(){ const r = this.remote && this.remote.rec; return r && r.uptime ? r.uptime + (Date.now() - this.rcvAt) : 0; },
+};
+
+const HEALTH_TXT = {good: ['Excellent', 'Le flux part sans perte.'], warn: ['Instable', 'Quelques images perdues côté poste Diffusion.'],
+  bad: ['Mauvais', 'Le poste Diffusion n\'arrive pas à suivre : baissez le débit ou la résolution sur le poste.']};
+function liveStatusText(){
+  const L = Live;
+  if(L.status === 'live') return 'EN LIGNE ' + hms(L.uptime());
+  if(L.status === 'lost') return 'POSTE DÉCONNECTÉ';
+  if(L.status === 'connecting') return 'CONNEXION…';
+  if(L.status === 'reconnecting') return 'RECONNEXION…';
+  if(L.status === 'error') return 'ERREUR DIFFUSION';
+  return L.stations ? 'DIFFUSION PRÊTE' : 'DIFFUSION';
+}
+function renderLivePill(){
+  const p = $('#pillLive'); if(!p) return;
+  const L = Live, h = L.health();
+  p.className = 'spill ' + (L.status === 'live' ? 'lv-' + (h || 'good') : L.status === 'connecting' || L.status === 'reconnecting' ? 'lv-wait' : L.status === 'lost' ? 'lv-lost' : L.status === 'error' ? 'lv-err' : L.stations ? 'lv-ready' : '');
+  $('#liveLbl').textContent = liveStatusText();
+  $('#liveKb').textContent = L.status === 'live' ? nf(L.kbpsNow) + ' kb/s' : '';
+  p.title = L.stations ? `Poste Diffusion connecté (${(L.remote && L.remote.postes || []).map(x => x.poste || x.ip).join(', ')}) — cliquer pour le contrôle` : 'Aucun poste Diffusion connecté — cliquer pour savoir comment le connecter';
+  const r = $('#pillRec');
+  if(r){
+    const rs = L.remote && L.remote.rec ? L.remote.rec.status : (L.status === 'lost' ? 'lost' : 'idle');
+    r.className = 'spill ' + (rs === 'rec' ? 'rec-on' : rs === 'waitfeed' ? 'lv-wait' : rs === 'lost' ? 'lv-lost' : rs === 'error' ? 'lv-err' : '');
+    $('#recLbl').textContent = rs === 'rec' ? 'REC ' + hms(L.recUptime()) : rs === 'waitfeed' ? 'REC EN ATTENTE' : rs === 'lost' ? 'REC ?' : rs === 'error' ? 'REC ERREUR' : 'REC';
+    r.title = rs === 'rec' ? 'Enregistrement en cours sur le poste Diffusion' + (L.remote.rec.file ? ' : ' + L.remote.rec.file : '') : 'Enregistrement (sur le poste Diffusion)';
+  }
+}
+
+// fenêtre « Diffusion » de la régie : état du poste et commandes (les réglages sont sur le poste Diffusion)
+function streamDialog(){
+  const L = Live;
+  openModal('Diffusion en ligne — poste Diffusion', `
+    <div class="livebar"><span class="bigdot" id="sDot"></span><div class="st-txt"><b id="sState"></b><small id="sSub"></small></div>
+      <button class="btn" id="sAir" style="height:36px;padding:0 16px"></button><button class="btn" id="sRec" style="height:36px;padding:0 16px"></button></div>
+    <div class="tiles">
+      <div class="tile"><small>Diffusion</small><b id="tUp">—</b><i id="tHealthSub"></i></div>
+      <div class="tile"><small>Débit envoyé</small><b id="tKb">—</b></div>
+      <div class="tile"><small>Enregistrement</small><b id="tRec">—</b><i id="tRecFile"></i></div>
+      <div class="tile"><small>Postes connectés</small><b id="tDest">—</b><i id="tDestSub"></i></div>
+    </div>
+    <p class="info" style="margin-top:14px">La régie envoie le programme du bus <b>WEB</b> (image, PIP, synthés web et son du master WEB) au <b>poste Diffusion</b>. C'est lui qui gère les plateformes (Facebook, YouTube…), les clés de stream, la qualité et l'enregistrement : il peut être préparé à l'avance, même régie éteinte.</p>
+    <p class="info"><b>Connecter un poste</b> : ouvrez « ScènePro Diffusion » sur l'ordinateur de diffusion, onglet <b>Liaison régie</b>. Sur cet ordinateur, choisissez « Cet ordinateur » ; depuis un autre, indiquez l'adresse, le port et le code d'accès de la régie${typeof netDialog === 'function' ? ' (<a href="#" id="sNet" style="color:var(--accent)">voir l\'accès réseau</a>)' : ''}.</p>`, true);
+  $('#sAir').onclick = () => { if(L.onAirOrPending()){ if(confirm('Arrêter la diffusion en ligne sur le poste Diffusion ?')) L.cmd('stream-stop'); } else L.cmd('stream-start'); };
+  $('#sRec').onclick = () => { if(L.recOn()){ if(confirm('Arrêter l\'enregistrement sur le poste Diffusion ?')) L.cmd('rec-stop'); } else L.cmd('rec-start'); };
+  const n = $('#sNet'); if(n) n.onclick = e => { e.preventDefault(); netDialog(); };
+  updateStatsUI();
+}
+function updateStatsUI(){
+  const L = Live; if(!$('#sState')) return;
+  const h = L.health(), r = L.remote;
+  $('#sDot').className = 'bigdot ' + (L.status === 'live' ? (h || 'good') : (L.status === 'connecting' || L.status === 'reconnecting' || L.status === 'lost') ? 'wait' : L.status === 'error' ? 'err' : '');
+  $('#sState').textContent = !L.linked ? 'Serveur local indisponible' : !L.stations ? (L.status === 'lost' ? 'Poste Diffusion déconnecté' : 'Aucun poste Diffusion connecté')
+    : L.status === 'live' ? 'EN LIGNE — ' + HEALTH_TXT[h || 'good'][0] : {idle: 'Poste Diffusion prêt', connecting: 'Connexion aux plateformes…', reconnecting: 'Reconnexion…', error: 'Erreur de diffusion'}[L.status] || L.status;
+  $('#sSub').textContent = !L.stations ? (L.status === 'lost' ? 'État inconnu : vérifiez le poste Diffusion.' : 'Ouvrez « ScènePro Diffusion » et connectez-le à cette régie.')
+    : L.status === 'live' ? (r.dests || []).map(d => d.name).join(' · ') : L.sending ? `Programme envoyé : ${L.want.res}p ${L.want.fps} i/s` : 'Préparation de l\'envoi…';
+  const air = $('#sAir'), rec = $('#sRec');
+  air.textContent = L.onAirOrPending() ? '■ Arrêter la diffusion' : '● Démarrer la diffusion'; air.className = 'btn ' + (L.onAirOrPending() ? '' : 'red'); air.disabled = !L.stations;
+  rec.textContent = L.recOn() ? '■ Arrêter le REC' : '● REC'; rec.className = 'btn ' + (L.recOn() ? '' : 'red'); rec.disabled = !L.stations;
+  const set = (id, v, cls) => { const e = $('#' + id); if(e){ e.textContent = v; if(cls !== undefined) e.className = cls; } };
+  set('tUp', L.status === 'live' ? hms(L.uptime()) : liveStatusText(), L.status === 'live' ? (h === 'bad' ? 'r' : h === 'warn' ? 'w' : 'g') : '');
+  set('tHealthSub', L.status === 'live' ? HEALTH_TXT[h || 'good'][1] : '');
+  set('tKb', L.status === 'live' ? nf(L.kbpsNow) + ' kb/s' : '—');
+  const rs = r && r.rec ? r.rec.status : 'idle';
+  set('tRec', rs === 'rec' ? hms(L.recUptime()) : rs === 'waitfeed' ? 'en attente' : rs === 'error' ? 'erreur' : '—', rs === 'rec' ? 'r' : '');
+  set('tRecFile', rs === 'rec' && r.rec.file ? r.rec.file : '');
+  set('tDest', String(L.stations));
+  set('tDestSub', (r && r.postes || []).map(x => (x.poste || 'poste') + ' (' + x.ip + ')').join(', '));
+}
+
+/* ---------------- Rendu ---------------- */
+function render(){ renderBin(); renderInspector(); renderMonitors(); renderMultiview(); renderTimes(); Mixer.syncLive(); if(lowerTab === 'mix') renderMixer(); Remote.pushState(); }
+
+function buildMultiview(){
+  $('#multiview').innerHTML = Engine.buses.map(b => `
+    <div class="mvc" data-bus="${b.i}" title="Cliquer pour sélectionner ${b.name} (F${b.i + 1})">
+      <div class="mvs"><div class="empty">NOIR</div><div class="stage" id="mvStage${b.i}"></div><span class="mvblk" id="mvBlk${b.i}">NOIR</span></div>
+      <div class="mvi">
+        <div class="mvh"><span class="mvair"></span><span class="mvtag">${b.name}</span><button class="mvpip" data-pip="1" title="PIP (image dans l'image) sur ${b.name}">PIP</button><button class="mvpip mvrec" data-enr="1" title="Enregistrer ${b.name} sur le poste Enregistrement">REC</button><span class="mvkey">${b.i === 0 ? '🔊 ' : ''}F${b.i + 1}</span></div>
+        <div class="mvt" id="mvTitle${b.i}">—</div>
+        <div class="mvtime" id="mvTime${b.i}">—</div>
+        <div class="mvr">${ROUTE_NAMES.map((n, r) => `<button data-r="${r}" title="Envoyer ${b.name} sur : ${n}">${ROUTE_SHORT[r]}</button>`).join('')}${b.i > 0 ? `<button data-follow="1" class="b-ret" title="Retour présentateur : ce programme suit le PGM 1 et ses sorties affichent l'heure, le temps restant et le média suivant">RETOUR</button>` : ''}</div>
+      </div>
+    </div>`).join('');
+  $('#multiview').addEventListener('click', e => {
+    const card = e.target.closest('.mvc'); if(!card) return;
+    const b = +card.dataset.bus, rb = e.target.closest('[data-r]');
+    if(e.target.closest('[data-pip]')) pipDialog(b);
+    else if(e.target.closest('[data-enr]')) RecSt.toggle(b + 1);
+    else if(e.target.closest('[data-follow]')) setFollow(b, !Engine.buses[b].follow);
+    else if(rb) setRoute(+rb.dataset.r, b); else selectBus(b);
+  });
+}
+function renderMultiview(){
+  Engine.buses.forEach(b => {
+    const card = document.querySelector(`.mvc[data-bus="${b.i}"]`); if(!card) return;
+    card.classList.toggle('sel', b === Engine.sel);
+    card.classList.toggle('air', b.onAir() && !!b.item && !b.black);
+    $('#mvTitle' + b.i).textContent = b.item ? b.item.name : '—';
+    $('#mvBlk' + b.i).classList.toggle('on', b.black);
+    const fb = card.querySelector('[data-follow]'); if(fb) fb.classList.toggle('on', b.follow);
+    card.querySelector('[data-pip]').classList.toggle('on', b.pip.on);
+    const er = card.querySelector('[data-enr]'); if(er){ const r = RecSt.status('pgm' + (b.i + 1)); er.classList.toggle('on', r === 'rec'); er.classList.toggle('wait', r === 'wait'); er.classList.toggle('none', !RecSt.postes.length); }
+    card.querySelectorAll('[data-r]').forEach(btn => {
+      const r = +btn.dataset.r, mine = state.route[r] === b.i;
+      const active = routeActive(r);
+      btn.classList.toggle('on', mine); btn.classList.toggle('off', mine && !active);
+    });
+  });
+}
+
+function renderMonitors(){
+  const pv = pvwItem(), B = Engine.sel, pg = B.item;
+  $('#pvwTitle').textContent = pv ? pv.name : '—';
+  $('#pvwType').textContent = pv ? typeLabel(pv.type) : 'VIDE';
+  $('#pvwType').classList.toggle('red', !!pv && pv.type === 'live');
+  $('.pgm .tag').textContent = 'PROGRAMME ' + (B.i + 1);
+  $('#pgmTitle').textContent = pg ? pg.name : '—';
+  const anyOut = OUTS.some(outLive);
+  const streaming = Live.status === 'live';
+  $('#onAir').classList.toggle('live', B.onAir() && !!pg && !B.black);
+  OUTS.forEach(i => {
+    const p = $('#pillOut' + i), on = outLive(i);
+    const fs = on && !!Engine.outs[i].win.document.fullscreenElement;
+    p.classList.toggle('on', on);
+    p.innerHTML = `<i class="led"></i>SORTIE ${i + 1} <span class="kb">P${state.route[i] + 1}</span>`;
+    p.title = on ? `Sortie ${i + 1} : PGM ${state.route[i] + 1}, en direct ${fs ? '(plein écran)' : '(fenêtre)'} sur ${Engine.outs[i].screen}` : `Sortie ${i + 1} (PGM ${state.route[i] + 1}) : fermée — cliquer pour l'ouvrir`;
+  });
+  $('#outsBadge').innerHTML = B.routes().filter(routeActive).map(r => `<span ${r === WEB ? 'style="background:var(--red)"' : ''}>${ROUTE_SHORT[r]}</span>`).join('') + (B.follow ? '<span style="border-color:var(--amber);color:var(--amber)">RETOUR</span>' : '');
+  $('#btnBlack').classList.toggle('on', B.black);
+  $('#blackBadge').classList.toggle('on', B.black);
+  $('#pgmPlay').innerHTML = B.paused ? I.play : I.pause;
+  $('#pgmMute').innerHTML = Mixer.mute ? I.mute : I.vol;
+  $('#pgmMute').classList.toggle('on', Mixer.mute);
+  $('#showName').textContent = state.showName;
+  document.querySelectorAll('#rate button').forEach(b => b.classList.toggle('on', +b.dataset.ms === state.fadeMs));
+  $('.tb-label').textContent = '→ PGM ' + (B.i + 1);
+  const n = nextReady(B.programId);
+  $('#upNext').innerHTML = pg ? (n ? `Suivant : <b>${esc(n.name)}</b>` : 'Suivant : <b>fin de liste</b>') : '';
+  document.title = (anyOut || streaming ? '● ' : '') + 'ScènePro — Régie vidéo';
+  renderLivePill();
+}
+
+let lastSec = -1;
+function renderTimes(){
+  const now = new Date();
+  $('#clock').textContent = now.toLocaleTimeString('fr-FR');
+  if(now.getSeconds() !== lastSec){ lastSec = now.getSeconds(); if(Live.status !== 'idle' || Live.recOn()){ renderLivePill(); updateStatsUI(); } }
+  // preview
+  const pv = Engine.pvw && Engine.pvw.video;
+  const sc = $('#pvwScrub');
+  const pit = pvwItem();
+  if(pv && pit && pit.type === 'video' && isFinite(pv.duration)){
+    $('#pvwTime').textContent = fmt(pv.currentTime) + ' / ' + fmt(pv.duration);
+    if(!sc._drag) sc.value = Math.round(pv.currentTime / pv.duration * 1000);
+    sc.disabled = false;
+    $('#pvwPlay').innerHTML = pv.paused ? I.play : I.pause;
+  } else {
+    $('#pvwTime').textContent = pit ? (pit.type === 'live' ? 'EN DIRECT' : pit.type === 'image' ? (pit.imageDuration ? pit.imageDuration + ' s' : 'image fixe') : '00:00 / 00:00') : '00:00 / 00:00';
+    sc.value = 0; sc.disabled = true; $('#pvwPlay').innerHTML = I.play;
+  }
+  // programme sélectionné (grand moniteur)
+  const B = Engine.sel, it = B.item, elR = $('#pgmRemain');
+  const {cur, dur, st} = busTime(B);
+  // vignettes multiview
+  Engine.buses.forEach(b => {
+    const t = busTime(b), e = $('#mvTime' + b.i); if(!e) return;
+    e.textContent = !b.item ? '—' : t.st + ' · ' + (isFinite(t.dur) ? '-' + fmt(Math.ceil(t.dur - t.cur)) : fmt(t.cur));
+  });
+  $('#pgmState').textContent = st;
+  $('#pgmState').classList.toggle('red', st === 'LIVE');
+  $('#pgmElapsed').textContent = fmt(cur);
+  const rem = dur - cur;
+  if(isFinite(dur)){ elR.textContent = '-' + fmt(Math.ceil(rem)); $('#pgmBar').style.width = clamp(cur / dur * 100, 0, 100) + '%'; }
+  else { elR.textContent = it ? (it.type === 'live' ? 'LIVE' : '∞') : '--:--'; $('#pgmBar').style.width = it && it.type !== 'video' ? '100%' : '0'; }
+  const loopOn = it && it.type === 'video' && it.loop;
+  elR.classList.toggle('warn', isFinite(dur) && !loopOn && rem <= 10 && rem > 5 && !B.paused);
+  elR.classList.toggle('crit', isFinite(dur) && !loopOn && rem <= 5 && rem > 0 && !B.paused);
+}
+function busTime(b){
+  const it = b.item; let cur = 0, dur = NaN, st = '—';
+  if(it){
+    const v = b.master().video;
+    if(it.type === 'video' && v){ cur = v.currentTime; dur = v.duration; st = b.paused ? 'PAUSE' : v.ended ? 'FIN' : it.loop ? 'BOUCLE' : 'LECTURE'; }
+    else if(it.type === 'live'){ cur = b.elapsed() / 1000; dur = Infinity; st = 'LIVE'; }
+    else if(it.type === 'image'){ cur = b.elapsed() / 1000; dur = it.imageDuration > 0 ? it.imageDuration : Infinity;
+      st = b.paused ? 'PAUSE' : (b.endDone ? 'FIN' : (dur === Infinity ? 'IMAGE FIXE' : 'MINUTÉE')); if(isFinite(dur)) cur = Math.min(cur, dur); }
+  }
+  if(b.black) st = 'NOIR';
+  return {cur, dur, st};
+}
+
+function cardFlags(it){
+  let f = '';
+  const looping = it.type === 'video' && it.loop;
+  if(looping) f += `<span class="f-loop" title="Boucle">${I.loop}</span>`;
+  if(it.type !== 'image' && !it.audio) f += `<span class="f-mute" title="Sans son">${I.mute}</span>`;
+  if(it.type !== 'live' && it.endAction === 'next' && !looping) f += `<span class="f-next" title="Enchaîne le suivant">${I.next}</span>`;
+  if(it.type !== 'live' && it.endAction === 'black' && !looping) f += `<span class="f-black" title="Fondu au noir à la fin">${I.black}</span>`;
+  return f;
+}
+const typeIcon = t => t === 'video' ? I.video : t === 'live' ? I.cam : I.image;
+function renderBin(){
+  const g = $('#grid');
+  $('#binCount').textContent = state.items.length;
+  $('#dropzone').style.display = state.items.length ? 'none' : 'grid';
+  g.innerHTML = state.items.map((it, i) => {
+    const air = onAirBuses(it);
+    const cls = ['card', it.id === state.previewId ? 'pvw' : '', air.includes(Engine.sel.i) ? 'pgm' : '', it.status !== 'ready' ? 'locked' : '', it.status === 'missing' ? 'missing' : ''].join(' ');
+    const onb = air.length ? `<span class="onb">${air.map(b => `<span class="${b === Engine.sel.i ? 'sel' : ''}">P${b + 1}</span>`).join('')}</span>` : '';
+    const dur = it.type === 'live' ? '<span class="dur livebadge">LIVE</span>' : `<span class="dur">${it.type === 'video' ? (it.duration ? fmt(it.duration) : '…') : (it.imageDuration ? it.imageDuration + ' s' : '∞')}</span>`;
+    const lockTxt = it.status === 'missing' ? 'Fichier introuvable' : it.type === 'live' ? (it.err || 'Entrée inactive') + '<br>Cliquer pour reconnecter' : 'Cliquer pour réactiver';
+    return `<div class="${cls}" data-id="${it.id}" draggable="true">
+      <div class="thumb">${it.thumb ? `<img src="${it.thumb}" alt="">` : `<div class="ph-ic">${typeIcon(it.type)}</div>`}
+        <span class="idx">${String(i + 1).padStart(2, '0')}</span><span class="st s-pvw">PRÉVU</span>${onb}
+        <span class="flags">${cardFlags(it)}</span>${dur}
+        <div class="lockic"><div>${I.lock}${lockTxt}</div></div>
+      </div>
+      <div class="cap"><span class="ti">${typeIcon(it.type)}</span><span class="nm" title="${esc(it.fileName || it.name)}">${esc(it.name)}</span>
+        <button class="del" title="Retirer de la liste">${I.x}</button></div></div>`;
+  }).join('');
+  const locked = state.items.filter(i => i.status === 'locked').length;
+  $('#banner').innerHTML = locked ? `<div class="banner">${I.lock}<span class="grow"><b>${locked} élément(s) à réactiver.</b> Par sécurité, le navigateur demande votre accord pour relire les fichiers et entrées du show.</span><button class="btn" id="btnUnlock">Réactiver</button></div>` : '';
+  if(locked) $('#btnUnlock').onclick = unlockAll;
+}
+
+function renderInspector(){
+  const it = pvwItem(), box = $('#insp');
+  $('#inspChip').textContent = it ? typeLabel(it.type) : '—';
+  if(!it){
+    box.innerHTML = `<div class="nothing">${I.send}<div>Cliquez sur un média pour le mettre en <b style="color:var(--green)">prévisualisation</b> et régler sa lecture.</div>
+      <div class="keys"><kbd>Clic</kbd><span>Mettre en prévisualisation</span><kbd>Double-clic</kbd><span>Envoyer directement à l'antenne</span>
+      <kbd>Espace</kbd><span>AUTO (fondu)</span><kbd>Entrée</kbd><span>CUT</span><kbd>N</kbd><span>Média suivant</span><kbd>B</kbd><span>Fondu au noir</span></div></div>`;
+    return;
+  }
+  const v = it.type === 'video', lv = it.type === 'live', av = v || lv;
+  const seg = (f, opts) => `<div class="seg" data-seg="${f}">${opts.map(([val, lab]) => `<button data-v="${val}" class="${it[f] === val ? 'on' : ''}">${lab}</button>`).join('')}</div>`;
+  const meta = [];
+  if(it.w) meta.push(it.w + '×' + it.h);
+  if(v && it.duration) meta.push(fmt(it.duration));
+  if(it.fileName) meta.push(it.fileName.split('.').pop().toUpperCase());
+  if(lv) meta.push(Inputs.streams.has(it.id) ? 'SIGNAL OK' : 'INACTIVE');
+  if(it.status !== 'ready' && !lv) meta.push(it.status === 'missing' ? 'INTROUVABLE' : 'VERROUILLÉ');
+  box.innerHTML = `
+    <div class="field"><label>Nom</label><input class="txt" data-f="name" value="${esc(it.name)}"></div>
+    <div class="meta">${meta.map(m => `<span>${esc(m)}</span>`).join('')}</div>
+    ${v ? `<div class="row"><div class="l">${I.loop}<div>Lecture en boucle<small>Rejoue la vidéo sans fin</small></div></div><label class="switch"><input type="checkbox" data-f="loop" ${it.loop ? 'checked' : ''}><span></span></label></div>` : ''}
+    ${av ? `
+    <div class="row"><div class="l">${it.audio ? I.vol : I.mute}<div>Son<small>${lv && !it.audioId ? 'Aucune entrée audio choisie' : 'Envoyé aux sorties et à la diffusion'}</small></div></div><label class="switch"><input type="checkbox" data-f="audio" ${it.audio ? 'checked' : ''} ${lv && !it.audioId ? 'disabled' : ''}><span></span></label></div>
+    <div class="row"><div class="l" style="flex:1"><div style="flex:1">Volume<input type="range" data-f="volume" min="0" max="100" value="${Math.round(it.volume * 100)}" style="width:100%;display:block;margin-top:4px" ${it.audio ? '' : 'disabled'}></div></div><span class="tc" id="volLbl" style="width:38px;text-align:right">${Math.round(it.volume * 100)}%</span></div>
+    ` : `
+    <div class="row"><div class="l">${I.clock}<div>Durée d'affichage<small>0 = reste affichée jusqu'à votre action</small></div></div><div style="display:flex;align-items:center;gap:6px"><input class="txt num" type="number" min="0" step="1" data-f="imageDuration" value="${it.imageDuration}"><span style="color:var(--muted)">s</span></div></div>
+    `}
+    ${lv ? '<p class="hint" style="border-top:1px solid var(--line);padding-top:10px">Source en direct : elle reste à l\'antenne jusqu\'à votre prochaine action (AUTO, CUT, SUIVANT).</p>' : `
+    <div class="field" style="border-top:1px solid var(--line);padding-top:12px;margin-top:2px"><label>À la fin ${v && it.loop ? '<span style="text-transform:none;letter-spacing:0;color:var(--dim)">(inactif en boucle)</span>' : ''}</label>
+      ${seg('endAction', [['hold', v ? 'Dernière image' : 'Rester'], ['next', 'Suivant auto'], ['black', 'Noir']])}
+      <div class="hint">${it.endAction === 'next' ? 'Enchaîne automatiquement le média suivant de la liste.' : it.endAction === 'black' ? 'Fait un fondu au noir quand le média se termine.' : v ? 'La vidéo reste figée sur sa dernière image.' : 'L\'image reste à l\'écran.'}</div></div>`}
+    <div class="field"><label>Transition d'entrée (SUIVANT / auto)</label>${seg('transition', [['fade', 'Fondu'], ['cut', 'Cut']])}</div>
+    <div class="btnrow"><button class="btn red" id="iSend">${I.send}Envoyer à l'antenne</button></div>
+    <div class="btnrow">${lv ? '' : `<button class="btn" id="iApply" title="Copier ces réglages sur tous les médias du même type">Appliquer à toutes les ${v ? 'vidéos' : 'images'}</button>`}<button class="btn danger" id="iDel">${I.x}Retirer</button></div>`;
+
+  box.querySelectorAll('[data-f]').forEach(inp => {
+    const f = inp.dataset.f;
+    const h = () => {
+      if(f === 'name') it.name = inp.value || it.name;
+      else if(f === 'loop' || f === 'audio') it[f] = inp.checked;
+      else if(f === 'volume'){ it.volume = inp.value / 100; $('#volLbl').textContent = inp.value + '%'; }
+      else if(f === 'imageDuration') it.imageDuration = Math.max(0, +inp.value || 0);
+      liveUpdate(it);
+      if(f === 'name'){ renderMonitors(); const c = document.querySelector(`.card[data-id="${it.id}"] .nm`); if(c) c.textContent = it.name; }
+      else if(f !== 'volume') { renderBin(); if(f !== 'imageDuration') renderInspector(); }
+      save();
+    };
+    inp.addEventListener(f === 'name' || f === 'volume' || f === 'imageDuration' ? 'input' : 'change', h);
+  });
+  box.querySelectorAll('[data-seg]').forEach(sg => sg.onclick = e => {
+    const b = e.target.closest('button'); if(!b) return;
+    it[sg.dataset.seg] = b.dataset.v; renderBin(); renderInspector(); save();
+  });
+  $('#iSend').onclick = () => Engine.take(transMs(it));
+  $('#iDel').onclick = () => removeItem(it.id);
+  if($('#iApply')) $('#iApply').onclick = () => {
+    const keys = v ? ['loop', 'audio', 'volume', 'endAction', 'transition'] : ['imageDuration', 'endAction', 'transition'];
+    let n = 0; state.items.forEach(o => { if(o !== it && o.type === it.type){ keys.forEach(k => o[k] = it[k]); liveUpdate(o); n++; } });
+    toast(`Réglages appliqués à ${n} ${v ? 'vidéo(s)' : 'image(s)'}.`); renderBin(); save();
+  };
+}
+function liveUpdate(it){
+  Engine.buses.forEach(b => { if(b.programId === it.id){ b.stages().forEach(s => s.applyAudio()); if(it.type === 'image' || !it.loop) b.endDone = false; } });
+  if(it.id === state.previewId && Engine.pvw.video) Engine.pvw.video.loop = it.type === 'video' && !!it.loop;
+}
+
+/* ---------------- Menus du haut ---------------- */
+const MENUS = {
+  file: () => [
+    {label: 'Ajouter des médias…', kbd: 'Ctrl+O', action: pickFiles},
+    {label: 'Ajouter une entrée live…', action: addLiveDialog},
+    {sep: true},
+    {label: 'Enregistrer / ouvrir un show…', kbd: 'Ctrl+S', action: showsDialog},
+    {label: 'Nouveau show', action: newShow},
+  ],
+  outputs: () => [
+    {head: 'Sorties vidéo (HDMI, carte vidéo, projecteur)'},
+    ...OUTS.map(o => ({label: (outLive(o) ? `Sortie ${o + 1} — en direct` : `Ouvrir la sortie ${o + 1}…`) + `  (PGM ${state.route[o] + 1})`, checked: outLive(o), action: () => outputDialog(o)})),
+    {sep: true},
+    ...OUTS.map(o => ({label: `Plein écran sortie ${o + 1}`, kbd: 'FGH'[o], disabled: !outLive(o), action: () => toggleOutFs(o)})),
+    {sep: true},
+    {head: 'Routage : boutons S1 · S2 · S3 · WEB sous chaque programme'},
+    {label: 'Configuration conseillée (S1 + WEB = PGM 1, S2 = PGM 2, S3 = PGM 3)', action: () => { [0, 1, 2, 0].forEach((b, r) => setRoute(r, b)); }},
+    {sep: true},
+    {label: 'Fermer toutes les sorties', danger: true, disabled: !OUTS.some(outLive), action: () => OUTS.forEach(o => closeOutput(o))},
+    {sep: true},
+    {head: 'Habillage (incrustation sur le BUS 1 / WEB)'},
+    {label: 'Ouvrir le poste Synthé / habillage…', action: () => Gfx.open()},
+    {label: 'Accès réseau (autres ordinateurs)…', action: () => netDialog()},
+    {label: 'Retirer tout l\'habillage de l\'antenne', disabled: !Gfx.ready || !Gfx.scene.count(), danger: true, action: () => Gfx.panic()},
+    {sep: true},
+    {head: 'Programmes (reportages, clips, jingles)'},
+    {label: 'Ouvrir le poste Programmes…', action: () => Prog.open()},
+    {label: 'Rendre l\'antenne (arrêter tous les programmes)', disabled: !Engine.buses.some(b => b.item && b.item.prog), danger: true, action: () => Prog.run({action: 'stopall'})},
+  ],
+  audio: () => [
+    {label: 'Table de mixage', action: () => setLowerTab('mix')},
+    {label: 'Ajouter une entrée audio (micro, console)…', action: addMicDialog},
+    {sep: true},
+    {label: 'Sortie audio SALLE (sono, HDMI)…', action: audioDeviceDialog},
+    {label: Mixer.mute ? 'Rétablir le son (tout)' : 'Couper tout le son', kbd: 'M', action: () => $('#pgmMute').click()},
+  ],
+  inputs: () => {
+    const lives = state.items.filter(i => i.type === 'live');
+    return [
+      {label: 'Ajouter une entrée live (carte de capture, webcam)…', action: addLiveDialog},
+      ...(lives.length ? [{sep: true}, {head: 'Entrées actives'}] : []),
+      ...lives.map(l => ({label: l.name + (Inputs.streams.has(l.id) ? '' : ' (inactive)'), checked: Inputs.streams.has(l.id),
+        action: () => { if(Inputs.streams.has(l.id)) cuePreview(l.id); else unlock(l, true).then(() => render()); }})),
+    ];
+  },
+  stream: () => {
+    const on = Live.onAirOrPending(), rec = Live.recOn(), none = !Live.stations;
+    return [
+      {head: none ? 'Aucun poste Diffusion connecté' : 'Poste Diffusion connecté'},
+      on ? {label: '■ Arrêter la diffusion en ligne', danger: true, action: () => { if(confirm('Arrêter la diffusion en ligne ?')) Live.cmd('stream-stop'); }}
+         : {label: '● Démarrer la diffusion en ligne', cls: 'live', disabled: none, action: () => Live.cmd('stream-start')},
+      rec ? {label: '■ Arrêter l\'enregistrement (REC)', danger: true, action: () => { if(confirm('Arrêter l\'enregistrement ?')) Live.cmd('rec-stop'); }}
+          : {label: '● Démarrer l\'enregistrement (REC)', cls: 'live', disabled: none, action: () => Live.cmd('rec-start')},
+      {sep: true},
+      {label: 'État de la diffusion / connecter un poste…', action: () => streamDialog()},
+      {sep: true}, {head: 'Image envoyée sur le web'},
+      ...[0, 1, 2].map(b => ({label: `PGM ${b + 1}${b === 0 ? ' (recommandé : avec le son)' : ' (sans son média)'}`, checked: state.route[WEB] === b, action: () => setRoute(WEB, b)})),
+    ];
+  },
+  help: () => [
+    {label: 'Raccourcis clavier', kbd: '?', action: helpDialog},
+    {label: 'Télécommandes (Stream Deck, claviers macro…)', action: remoteDialog},
+    {label: 'Mode d\'emploi rapide', action: guideDialog},
+    {sep: true},
+    {label: 'À propos de ScènePro', action: aboutDialog},
+  ],
+};
+const dd = $('#dropdown');
+let openMenu = null;
+function showMenu(btn){
+  const key = btn.dataset.menu;
+  document.querySelectorAll('.menubar>button').forEach(b => b.classList.toggle('open', b === btn));
+  openMenu = key;
+  const items = MENUS[key]();
+  dd.innerHTML = items.map((it, i) => it.sep ? '<div class="dd-sep"></div>' : it.head ? `<div class="dd-head">${esc(it.head)}</div>` :
+    `<button class="dd-item ${it.danger ? 'danger' : ''} ${it.cls || ''}" data-i="${i}" ${it.disabled ? 'disabled' : ''}><span class="ck">${it.checked ? I.check : ''}</span><span class="lb">${esc(it.label)}</span>${it.kbd ? `<span class="kb">${it.kbd}</span>` : ''}</button>`).join('');
+  const r = btn.getBoundingClientRect();
+  dd.style.left = r.left + 'px'; dd.style.top = (r.bottom + 4) + 'px';
+  dd.classList.add('on');
+  dd.querySelectorAll('.dd-item').forEach(b => b.onclick = () => { const it = items[+b.dataset.i]; hideMenu(); it.action(); render(); });
+}
+function hideMenu(){ dd.classList.remove('on'); openMenu = null; document.querySelectorAll('.menubar>button').forEach(b => b.classList.remove('open')); }
+$('#menubar').addEventListener('click', e => { const b = e.target.closest('button'); if(!b) return; if(openMenu === b.dataset.menu) hideMenu(); else showMenu(b); });
+$('#menubar').addEventListener('mouseover', e => { const b = e.target.closest('button'); if(b && openMenu && openMenu !== b.dataset.menu) showMenu(b); });
+document.addEventListener('mousedown', e => { if(openMenu && !dd.contains(e.target) && !e.target.closest('#menubar')) hideMenu(); });
+
+$('#pillOut0').onclick = () => outputDialog(0);
+$('#pillOut1').onclick = () => outputDialog(1);
+$('#pillOut2').onclick = () => outputDialog(2);
+$('#pillGfx').onclick = () => Gfx.open();
+$('#pillProg').onclick = () => Prog.open();
+$('#pillLive').onclick = () => streamDialog();
+$('#pillRec').onclick = () => streamDialog();
+
+/* ---------------- Interactions ---------------- */
+const grid = $('#grid'), bin = $('#bin');
+grid.addEventListener('click', e => {
+  const card = e.target.closest('.card'); if(!card) return;
+  const it = getItem(card.dataset.id);
+  if(e.target.closest('.del')){ removeItem(it.id); return; }
+  if(it.status === 'locked'){ unlock(it, true).then(ok => { if(ok){ cuePreview(it.id); } else if(it.type === 'live') toast('Entrée indisponible : ' + (it.err || 'vérifiez le branchement')); render(); }); return; }
+  if(it.status === 'missing'){ toast('Ce fichier a été déplacé ou supprimé. Retirez-le et ajoutez-le à nouveau.'); return; }
+  if(it.id !== state.previewId) cuePreview(it.id);
+});
+grid.addEventListener('dblclick', e => {
+  const card = e.target.closest('.card'); if(!card || e.target.closest('.del')) return;
+  const it = getItem(card.dataset.id);
+  if(isReady(it)){ if(it.id !== state.previewId) cuePreview(it.id); Engine.take(transMs(it)); }
+});
+let dragId = null;
+grid.addEventListener('dragstart', e => {
+  const card = e.target.closest('.card'); if(!card) return;
+  dragId = card.dataset.id; card.classList.add('dragging');
+  e.dataTransfer.setData('application/x-scenepro', dragId); e.dataTransfer.effectAllowed = 'move';
+});
+grid.addEventListener('dragend', () => { dragId = null; document.querySelectorAll('.card').forEach(c => c.classList.remove('dragging', 'ins-before', 'ins-after')); });
+function insPos(e){ const card = e.target.closest('.card'); if(!card) return null; const r = card.getBoundingClientRect(); return {card, after: e.clientX > r.left + r.width / 2}; }
+bin.addEventListener('dragover', e => {
+  e.preventDefault();
+  document.querySelectorAll('.ins-before,.ins-after').forEach(c => c.classList.remove('ins-before', 'ins-after'));
+  if(dragId){ const p = insPos(e); if(p && p.card.dataset.id !== dragId) p.card.classList.add(p.after ? 'ins-after' : 'ins-before'); e.dataTransfer.dropEffect = 'move'; }
+  else { bin.classList.add('drag'); e.dataTransfer.dropEffect = 'copy'; }
+});
+bin.addEventListener('dragleave', e => { if(!bin.contains(e.relatedTarget)) bin.classList.remove('drag'); });
+bin.addEventListener('drop', async e => {
+  e.preventDefault(); bin.classList.remove('drag');
+  if(dragId){
+    const p = insPos(e); const from = state.items.findIndex(i => i.id === dragId);
+    const [moved] = state.items.splice(from, 1);
+    if(p && p.card.dataset.id !== dragId){ let to = state.items.findIndex(i => i.id === p.card.dataset.id); if(p.after) to++; state.items.splice(to, 0, moved); }
+    else if(!p) state.items.push(moved); else state.items.splice(from, 0, moved);
+    dragId = null; render(); save(); return;
+  }
+  const dts = [...e.dataTransfer.items].filter(i => i.kind === 'file');
+  const files = dts.map(i => i.getAsFile());
+  const hps = dts.map(i => i.getAsFileSystemHandle ? i.getAsFileSystemHandle().catch(() => null) : Promise.resolve(null));
+  const hs = await Promise.all(hps);
+  addEntries(files.map((f, k) => ({file: f, handle: hs[k] && hs[k].kind === 'file' ? hs[k] : null})).filter((x, k) => !(hs[k] && hs[k].kind === 'directory')));
+});
+
+$('#btnAdd').onclick = pickFiles;
+$('#btnAddLive').onclick = addLiveDialog;
+$('#btnCut').onclick = () => Engine.take(0);
+$('#btnAuto').onclick = () => Engine.take(state.fadeMs);
+$('#btnNext').onclick = () => Engine.next();
+$('#btnBlack').onclick = () => Engine.setBlack(!Engine.sel.black);
+$('#btnAddMic').onclick = addMicDialog;
+$('#lowTabs').onclick = e => { const b = e.target.closest('button'); if(b) setLowerTab(b.dataset.t); };
+$('#pgmVu').onclick = () => setLowerTab('mix');
+$('#rate').onclick = e => { const b = e.target.closest('button'); if(!b) return; state.fadeMs = +b.dataset.ms; renderMonitors(); save(); savePrefs(); };
+$('#pgmPlay').onclick = () => Engine.togglePause();
+$('#pgmRestart').onclick = () => Engine.restart();
+$('#pgmMute').onclick = () => { Mixer.init(); Mixer.mute = !Mixer.mute; Mixer.applyAll(); renderMonitors(); };
+$('#pvwPlay').onclick = () => { const v = Engine.pvw.video; if(!v || pvwItem().type === 'live') return; v.paused ? v.play().catch(()=>{}) : v.pause(); renderTimes(); };
+$('#pvwRewind').onclick = () => { const v = Engine.pvw.video; if(v && pvwItem().type === 'video'){ v.pause(); v.currentTime = 0; renderTimes(); } };
+const scrub = $('#pvwScrub');
+scrub.addEventListener('pointerdown', () => scrub._drag = true);
+scrub.addEventListener('pointerup', () => scrub._drag = false);
+scrub.addEventListener('input', () => { const v = Engine.pvw.video; if(v && isFinite(v.duration)) v.currentTime = scrub.value / 1000 * v.duration; renderTimes(); });
+
+function helpDialog(){
+  openModal('Raccourcis clavier', `<div class="keys" style="margin-top:0;font-size:13px">
+  <kbd>Espace</kbd><span><b>AUTO</b> — envoie la prévisualisation à l'antenne en fondu</span>
+  <kbd>Entrée</kbd><span><b>CUT</b> — envoie la prévisualisation en coupe franche</span>
+  <kbd>N</kbd><span><b>SUIVANT</b> — envoie le média suivant de la liste</span>
+  <kbd>B</kbd><span><b>NOIR</b> — fondu au noir / retour</span>
+  <kbd>P</kbd><span>Pause / reprise du programme</span>
+  <kbd>R</kbd><span>Reprendre le programme au début</span>
+  <kbd>M</kbd><span>Couper / rétablir le son</span>
+  <kbd>← →</kbd><span>Média précédent / suivant en prévisualisation</span>
+  <kbd>1 … 9</kbd><span>Mettre le média n° 1 à 9 en prévisualisation</span>
+  <kbd>F1 F2 F3</kbd><span>Sélectionner le programme 1, 2 ou 3 (cible de CUT / AUTO / SUIVANT / NOIR)</span>
+  <kbd>F</kbd> / <kbd>G</kbd><span>Plein écran de la sortie 1 / 2 (ou double-clic dessus)</span>
+  <kbd>Ctrl+O</kbd><span>Ajouter des médias</span>
+  <kbd>Ctrl+S</kbd><span>Enregistrer le show</span>
+  <kbd>Suppr</kbd><span>Retirer le média en prévisualisation</span></div>`);
+}
+function guideDialog(){
+  openModal('Mode d\'emploi rapide', `<ol class="info" style="padding-left:18px;margin:0">
+  <li><b>Préparer</b> : ajoutez vos vidéos, images (diapositives PowerPoint exportées en PNG) et entrées live. Réglez chaque média dans « Programmation ».</li>
+  <li><b>3 programmes</b> : le <b>PGM 1</b> est le programme principal (avec le son) ; les PGM 2 et 3 alimentent des écrans de salle. Cliquez sur une vignette (ou <kbd>F1</kbd> <kbd>F2</kbd> <kbd>F3</kbd>) pour choisir le programme que pilotent CUT / AUTO / SUIVANT / NOIR.</li>
+  <li><b>Routage</b> : sous chaque programme, les boutons <b>S1 S2 S3 WEB</b> choisissent les sorties qu'il alimente. Conseillé : S1 + WEB = PGM 1. Le bouton <b>RETOUR</b> transforme le PGM 2 ou 3 en retour présentateur (copie du PGM 1 + heure, temps restant, suivant).</li>
+  <li><b>PIP</b> : bouton <b>PIP</b> sur chaque programme pour incruster une caméra, une vidéo ou une image (touche <kbd>I</kbd>).</li>
+  <li><b>Sorties</b> : menu <b>Sorties</b> › Ouvrir la sortie 1, 2, 3 (HDMI, carte vidéo, projecteur). Windows en mode « Étendre » (<kbd>Win</kbd>+<kbd>P</kbd>).</li>
+  <li><b>Son</b> : onglet <b>Mixage audio</b> : tranches Médias, entrées live (AFV), micros et cartes son (une tranche par entrée), masters SALLE et WEB. Menu Audio › Sortie audio SALLE pour choisir la sono.</li>
+  <li><b>Diffusion en ligne</b> : menu <b>Diffusion</b> › Destinations : ajoutez Facebook, YouTube, Instagram… avec la clé de stream, puis « Démarrer ». Le voyant en haut à droite indique l'état et le débit.</li>
+  <li><b>Pendant le show</b> : cliquez un média pour le voir en <b style="color:var(--green)">prévisualisation</b>, puis <b>AUTO</b> (Espace) ou <b>CUT</b> (Entrée) pour l'envoyer au <b style="color:var(--red)">programme</b>. <b>SUIVANT</b> (N) enchaîne la liste.</li>
+  <li><b>Enregistrer</b> : Fichier › Enregistrer / ouvrir un show.</li></ol>`);
+}
+
+async function aboutDialog(){
+  let s = {};
+  try{ s = await (await fetch('/api/status', {cache: 'no-store'})).json(); }catch(e){}
+  openModal('À propos', `<div style="text-align:center;padding:6px 0 4px">
+    <div class="brand" style="justify-content:center;font-size:22px;margin:0 0 6px"><div class="mark" style="width:30px;height:30px"><i></i></div>ScènePro</div>
+    <p class="info" style="margin-bottom:10px">Régie vidéo · 3 programmes · diffusion en ligne · mixage audio</p>
+    <div class="meta" style="justify-content:center"><span>Version ${esc(s.version || '?')}</span><span>${s.app ? 'Application' : 'Mode navigateur'}</span><span>ffmpeg ${s.ffmpeg ? 'OK' : 'absent'}</span></div>
+    <p class="hint">${s.app ? 'Les mises à jour sont téléchargées automatiquement depuis GitHub et installées au redémarrage.' : ''}</p></div>`);
+}
+
+function onKey(e){
+  const t = e.target;
+  if(t && t.closest && t.closest('input,textarea,select') && t.type !== 'range' && t.type !== 'checkbox') return;
+  if(e.ctrlKey && (e.key === 'o' || e.key === 'O')){ e.preventDefault(); pickFiles(); return; }
+  if(e.ctrlKey && (e.key === 's' || e.key === 'S')){ e.preventDefault(); showsDialog(); return; }
+  if(openMenu){ if(e.key === 'Escape') hideMenu(); return; }
+  if($('#modal').classList.contains('on')){ if(e.key === 'Escape') closeModal(); return; }
+  if(e.ctrlKey || e.altKey || e.metaKey) return;
+  const k = e.key;
+  const move = d => { const i = state.items.findIndex(x => x.id === state.previewId); const j = clamp(i + d, 0, state.items.length - 1); if(state.items[j]) cuePreview(state.items[j].id); };
+  if(k === ' '){ e.preventDefault(); Engine.take(state.fadeMs); }
+  else if(k === 'Enter'){ e.preventDefault(); Engine.take(0); }
+  else if(k === 'n' || k === 'N'){ Engine.next(); }
+  else if(k === 'b' || k === 'B'){ Engine.setBlack(!Engine.sel.black); }
+  else if(k === 'F1' || k === 'F2' || k === 'F3'){ e.preventDefault(); selectBus(+k[1] - 1); }
+  else if(k === 'i' || k === 'I'){ togglePip(); }
+  else if(k === 'p' || k === 'P'){ Engine.togglePause(); }
+  else if(k === 'r' || k === 'R'){ Engine.restart(); }
+  else if(k === 'm' || k === 'M'){ $('#pgmMute').click(); }
+  else if(k === 'f' || k === 'F'){ toggleOutFs(0); }
+  else if(k === 'g' || k === 'G'){ toggleOutFs(1); }
+  else if(k === 'h' || k === 'H'){ toggleOutFs(2); }
+  else if(k === '?'){ helpDialog(); }
+  else if(k === 'ArrowRight'){ e.preventDefault(); move(1); }
+  else if(k === 'ArrowLeft'){ e.preventDefault(); move(-1); }
+  else if(k === 'Delete' && state.previewId){ removeItem(state.previewId); }
+  else if(/^[1-9]$/.test(k)){ const it = state.items[+k - 1]; if(it) cuePreview(it.id); }
+}
+document.addEventListener('keydown', onKey);
+
+/* ---------------- Télécommandes : Stream Deck, Companion, claviers macro ---------------- */
+const Remote = {
+  ws: null, token: '', connected: false, lastSent: '',
+  connect(){
+    if(!/^https?:/.test(location.protocol)) return;
+    const ws = new WebSocket(`ws://${location.host}/control`);
+    this.ws = ws;
+    ws.onmessage = e => {
+      let m; try{ m = JSON.parse(e.data); }catch(err){ return; }
+      if(m.type === 'hello'){ this.token = m.token; this.connected = true; this.lastSent = ''; if(m.lan) Gfx.lan = m.lan; this.pushState(); }
+      else if(m.type === 'cmd') this.run(m.cmd, m.arg);
+      else if(m.type === 'gfx') Gfx.update(m.state);
+      else if(m.type === 'gfxpeers'){ Gfx.postes = m.postes || []; if(m.lan) Gfx.lan = m.lan; renderGfxPill(); if($('#netBox')) netDialog(); }
+      else if(m.type === 'busfeed') Feeds.want(m.want || {});
+      else if(m.type === 'busfeed-restart') Feeds.restart(m.source);
+      else if(m.type === 'recorder') RecSt.update(m);
+      else if(m.type === 'prog') Prog.run(m);
+      else if(m.type === 'progpeers'){ Prog.postes = m.postes || []; Prog.lastSent = ''; renderProgPill(); }
+    };
+    ws.onclose = () => { this.connected = false; setTimeout(() => this.connect(), 3000); };
+  },
+  run(cmd, arg){
+    const map = {
+      auto: () => Engine.take(state.fadeMs), cut: () => Engine.take(0), next: () => Engine.next(),
+      black: () => Engine.setBlack(!Engine.sel.black), pause: () => Engine.togglePause(), restart: () => Engine.restart(),
+      bus: () => selectBus(clamp((arg || 1) - 1, 0, NBUS - 1)),
+      pip: () => togglePip(),
+      mute: () => $('#pgmMute').click(),
+      prev: () => { const i = state.items.findIndex(x => x.id === state.previewId); const it = state.items[Math.max(0, i - 1)]; if(it) cuePreview(it.id); },
+      pvwnext: () => { const i = state.items.findIndex(x => x.id === state.previewId); const it = state.items[Math.min(state.items.length - 1, i + 1)]; if(it) cuePreview(it.id); },
+      cue: () => { const it = state.items[(arg || 1) - 1]; if(it) cuePreview(it.id); },
+      // (les adresses /api/cmd/stream-* et rec-* vont directement au poste Diffusion ; ceci sert aux appels internes)
+      'stream-start': () => Live.cmd('stream-start'), 'stream-stop': () => Live.cmd('stream-stop'), 'stream-toggle': () => Live.cmd('stream-toggle'),
+      'rec-start': () => Live.cmd('rec-start'), 'rec-stop': () => Live.cmd('rec-stop'), 'rec-toggle': () => Live.cmd('rec-toggle'),
+      fs1: () => toggleOutFs(0), fs2: () => toggleOutFs(1), fs3: () => toggleOutFs(2),
+    };
+    if(map[cmd]){ map[cmd](); render(); }
+  },
+  pushState(){
+    if(!this.connected || this.ws.readyState !== 1) return;
+    const pg = pgmItem(), pv = pvwItem();
+    const s = { programme_selectionne: Engine.sel.i + 1, programme: pg ? pg.name : null, preview: pv ? pv.name : null, noir: Engine.sel.black, pause: Engine.paused,
+      pgm1: Engine.buses[0].item ? Engine.buses[0].item.name : null, pgm2: Engine.buses[1].item ? Engine.buses[1].item.name : null, pgm3: Engine.buses[2].item ? Engine.buses[2].item.name : null,
+      routage: {sortie1: 'PGM ' + (state.route[0] + 1), sortie2: 'PGM ' + (state.route[1] + 1), sortie3: 'PGM ' + (state.route[2] + 1), web: 'PGM ' + (state.route[WEB] + 1)},
+      sortie1: outLive(0), sortie2: outLive(1), diffusion: Live.status, debit_kbps: Math.round(Live.kbpsNow || 0), sante: Live.health(),
+      enregistrement: Live.remote && Live.remote.rec ? Live.remote.rec.status : 'idle', postes_diffusion: Live.stations };
+    const j = JSON.stringify(s);
+    if(j !== this.lastSent){ this.lastSent = j; this.ws.send(JSON.stringify({type: 'state', state: s})); }
+  },
+};
+function remoteDialog(){
+  if(!Remote.connected){
+    openModal('Télécommandes — Stream Deck, claviers macro', `<div class="warnbox">Les télécommandes par adresse web nécessitent de lancer ScènePro avec <b>« Lancer ScenePro.bat »</b>.</div>
+      <p class="info">Les <b>raccourcis clavier</b> fonctionnent toujours : programmez vos touches macro sur Espace, Entrée, N, B… (menu Aide › Raccourcis clavier).</p>`);
+    return;
+  }
+  const base = `http://localhost:${location.port}/api/cmd/`, k = '?k=' + Remote.token;
+  const rows = [['auto', 'AUTO (fondu)'], ['cut', 'CUT'], ['next', 'SUIVANT'], ['black', 'NOIR (bascule)'], ['pause', 'Pause / reprise'], ['restart', 'Reprendre au début'],
+    ['mute', 'Couper / rétablir le son'], ['prev', 'Prévisualisation : média précédent'], ['pvwnext', 'Prévisualisation : média suivant'], ['bus/1', 'Sélectionner le programme 1 (bus/2 = PGM 2, bus/3 = PGM 3)'], ['pip', 'PIP du programme sélectionné : afficher / retirer'],['cue/1','Mettre le média n°1 en prévisualisation (changez le chiffre)'],
+    ['stream-toggle', 'Diffusion en ligne : démarrer / arrêter (poste Diffusion)'], ['stream-start', 'Diffusion : démarrer'], ['stream-stop', 'Diffusion : arrêter'],
+    ['rec-toggle', 'Enregistrement (REC) : démarrer / arrêter'], ['rec-start', 'REC : démarrer'], ['rec-stop', 'REC : arrêter'], ['fs1', 'Plein écran sortie 1'], ['fs2', 'Plein écran sortie 2']];
+  openModal('Télécommandes — Stream Deck, claviers macro', `
+    <p class="info"><b>Méthode 1 — touches clavier</b> (claviers et pavés macro Mars Gaming, Razer, Logitech, Stream Deck action « Raccourci clavier ») : programmez les touches sur les raccourcis de ScènePro (<kbd>Espace</kbd> AUTO, <kbd>Entrée</kbd> CUT, <kbd>N</kbd> SUIVANT, <kbd>B</kbd> NOIR…). La fenêtre de la régie doit être au premier plan.</p>
+    <p class="info"><b>Méthode 2 — adresses web</b> (recommandée, fonctionne même si la régie n'est pas au premier plan) : Stream Deck avec un plugin « API Ready » / « Web Requests » (requête GET), Bitfocus Companion (« Generic HTTP »), Touch Portal… Collez l'adresse de la commande voulue :</p>
+    <div style="display:flex;flex-direction:column;gap:6px">${rows.map(([c, l]) => `<div class="showrow"><div class="n"><b>${l}</b><small style="font-family:var(--mono);user-select:text">${esc(base + c + k)}</small></div><button class="btn sm" data-copy="${esc(base + c + k)}">Copier</button><button class="btn sm" data-test="${esc(c)}">Tester</button></div>`).join('')}</div>
+    <p class="hint">Retour d'état pour vos boutons (programme, noir, diffusion, débit…) : <span style="font-family:var(--mono);user-select:text">${esc(`http://localhost:${location.port}/api/state${k}`)}</span><br>
+    Le jeton <b>k=…</b> protège la régie : ne le partagez pas. Il est conservé d'une séance à l'autre.</p>`, true);
+  $('#mBody').querySelectorAll('[data-copy]').forEach(b => b.onclick = () => { navigator.clipboard.writeText(b.dataset.copy).then(() => toast('Adresse copiée.'), () => toast('Copie impossible : sélectionnez le texte.')); });
+  $('#mBody').querySelectorAll('[data-test]').forEach(b => b.onclick = () => { fetch(base + b.dataset.test + k).then(r => r.json()).then(j => toast(j.ok ? 'Commande « ' + j.cmd + ' » reçue.' : 'Erreur : ' + j.error)); });
+}
+
+/* ---------------- Shows ---------------- */
+async function showsDialog(){
+  let list = [];
+  try{ list = (await DB.all('shows')).sort((a, b) => b.savedAt - a.savedAt); }catch(e){}
+  openModal('Shows', `
+    <div class="flabel">Enregistrer le show actuel</div>
+    <div style="display:flex;gap:8px"><input class="txt" id="sName" value="${esc(state.showName)}" placeholder="Nom du show"><button class="btn primary" id="sSave">Enregistrer</button></div>
+    <p class="hint">Le show en cours est aussi sauvegardé automatiquement. Les fichiers restent à leur place sur le disque : ne les déplacez pas.</p>
+    <div class="flabel" style="margin-top:18px">Shows enregistrés</div>
+    <div class="shows">${list.length ? list.map(s => `<div class="showrow"><div class="n"><b>${esc(s.name)}</b><small>${s.items.length} élément(s) · ${new Date(s.savedAt).toLocaleString('fr-FR')}</small></div>
+      <button class="btn" data-open="${esc(s.name)}">Ouvrir</button><button class="btn danger" data-del="${esc(s.name)}">${I.x}</button></div>`).join('') : '<p class="hint">Aucun show enregistré.</p>'}</div>`);
+  $('#sSave').onclick = async () => {
+    const n = $('#sName').value.trim() || 'Sans titre'; state.showName = n;
+    try{ await DB.put('shows', n, serialize()); save(); toast('Show « ' + n + ' » enregistré.'); }catch(e){ toast('Erreur d\'enregistrement : ' + e.message); }
+    renderMonitors(); showsDialog();
+  };
+  $('#mBody').querySelectorAll('[data-open]').forEach(b => b.onclick = async () => {
+    if(Engine.buses.some(b => b.programId) && !confirm('Un média est à l\'antenne. Ouvrir un autre show va couper le programme. Continuer ?')) return;
+    const d = await DB.get('shows', b.dataset.open); closeModal(); await restore(d); save();
+    toast('Show « ' + d.name + ' » ouvert.');
+  });
+  $('#mBody').querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
+    if(!confirm('Supprimer le show « ' + b.dataset.del + ' » ? (les fichiers médias ne sont pas touchés)')) return;
+    await DB.del('shows', b.dataset.del); showsDialog();
+  });
+}
+async function newShow(){
+  if(!confirm('Vider la liste des médias pour commencer un nouveau show ?')) return;
+  await restore({name: 'Sans titre', fadeMs: state.fadeMs, items: []}); save();
+}
+
+/* ---------------- Modale / toast ---------------- */
+const Modal = { onClose: null };
+function openModal(title, html, wide){
+  if(Modal.onClose && $('#modal').classList.contains('on')){ const f = Modal.onClose; Modal.onClose = null; f(); }
+  $('#mTitle').textContent = title; $('#mBody').innerHTML = html; $('#dlg').classList.toggle('wide', !!wide); $('#modal').classList.add('on');
+}
+function closeModal(){ $('#modal').classList.remove('on'); if(Modal.onClose){ const f = Modal.onClose; Modal.onClose = null; f(); } }
+$('#mClose').onclick = closeModal;
+$('#modal').addEventListener('mousedown', e => { if(e.target.id === 'modal') closeModal(); });
+let toastT;
+function toast(msg){ const t = $('#toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('on'), 4200); }
+
+window.addEventListener('beforeunload', e => {
+  if((OUTS.some(outLive) && Engine.buses.some(b => b.programId)) || Live.status === 'live'){ e.preventDefault(); e.returnValue = ''; }
+});
+window.addEventListener('pagehide', () => { OUTS.forEach(i => { if(outLive(i)) Engine.outs[i].win.close(); }); });
+
+/* ---------------- Habillage : synthés du poste Synthé, incrustés (DSK) sur le BUS 1 et/ou le WEB ---------------- */
+const Gfx = {
+  ready: typeof GfxRender !== 'undefined', scene: null, win: null, last: 0, used: false, lan: null, postes: [],
+  // cibles de chaque élément : {pgm1, pgm2, pgm3, web} — par défaut PGM 1 + WEB
+  hasTarget(d, key){ return d.targets ? !!d.targets[key] : (key === 'pgm1' || key === 'web'); },
+  filters: {},
+  filter(key){ return this.filters[key] || (this.filters[key] = d => this.hasTarget(d, key)); },
+  init(){
+    if(!this.ready) return;
+    this.scene = new GfxRender.Scene();
+    this.kick();
+    // si la fenêtre qui porte l'animation se ferme, on relance la boucle ailleurs
+    setInterval(() => { if(Date.now() - this.last > 400) this.kick(); }, 500);
+  },
+  gen: 0,
+  kick(){ this.gen++; this.last = Date.now(); this.schedule(this.gen); },
+  schedule(gen){
+    const w = (Engine.tickWin && !Engine.tickWin.closed) ? Engine.tickWin : window;
+    const f = () => this.loop(gen);
+    try{ w.requestAnimationFrame(f); }catch(e){ requestAnimationFrame(f); }
+  },
+  update(st){
+    if(!this.ready) return;
+    this.scene.update(st || {});
+    renderGfxPill();
+  },
+  loop(gen){
+    if(gen !== this.gen) return; // une boucle plus récente a pris le relais
+    this.last = Date.now();
+    const now = performance.now(), active = this.scene.active(now);
+    if(active || this.used){
+      // chaque stage reçoit les éléments ciblant son programme ; un programme en mode RETOUR copie le PGM 1
+      const map = new Map();
+      Engine.buses.forEach(b => { const key = b.follow ? 'pgm1' : 'pgm' + (b.i + 1); b.stages().forEach(s => map.set(s, this.filter(key))); });
+      Engine.stages().forEach(s => s.drawGfx(active ? map.get(s) : null, now));
+      this.used = active;
+    }
+    this.schedule(gen);
+  },
+  open(){
+    if(!/^https?:/.test(location.protocol) || !this.ready){ toast('Le poste Synthé nécessite de lancer ScènePro avec l\'application ou « Lancer ScenePro.bat ».'); return; }
+    if(this.win && !this.win.closed){ this.win.focus(); return; }
+    this.win = window.open('/synthe', 'scenepro_synthe', 'popup=yes,width=1500,height=900');
+    if(!this.win) toast('La fenêtre du poste Synthé a été bloquée. Autorisez les fenêtres pop-up pour ScènePro.');
+  },
+  // retrait d'urgence depuis la régie : passe par le serveur pour que le poste Synthé soit à jour
+  panic(){
+    fetch(`/api/gfx/clear?k=${Remote.token}`).then(r => r.json()).then(j => { if(!j.ok){ this.scene.update({items: []}); renderGfxPill(); toast('Habillage retiré (poste Synthé non ouvert).'); } })
+      .catch(() => { this.scene.update({items: []}); renderGfxPill(); });
+  },
+};
+function renderGfxPill(){
+  const p = $('#pillGfx'); if(!p || !Gfx.ready) return;
+  const on = [...Gfx.scene.items.values()].filter(s => s.on).map(s => s.data), n = on.length;
+  const where = [['pgm1', 'PGM1'], ['pgm2', 'PGM2'], ['pgm3', 'PGM3'], ['web', 'WEB']].filter(([k]) => on.some(d => Gfx.hasTarget(d, k))).map(x => x[1]).join('+');
+  p.classList.toggle('on', n > 0 && !!where);
+  $('#gfxLbl').textContent = n ? `SYNTHÉ ${n} · ${where || 'AUCUNE SORTIE'}` : 'SYNTHÉ';
+  const syn = (Gfx.postes || []).filter(x => x.role === 'synthe');
+  p.title = syn.length ? 'Postes Synthé connectés : ' + syn.map(x => x.ip).join(', ') : 'Synthé / habillage — cliquer pour ouvrir le poste Synthé';
+}
+/* Accès réseau : faire le poste Synthé / l'overlay sur d'autres ordinateurs */
+function netDialog(){
+  const L = Gfx.lan;
+  if(!Remote.connected || !L){ openModal('Accès réseau', '<div class="warnbox">L\'accès réseau nécessite de lancer ScènePro avec l\'application ou « Lancer ScenePro.bat ».</div>'); return; }
+  const ips = L.ips || [], postes = Gfx.postes || [];
+  const row = (lbl, url) => `<div class="showrow"><div class="n"><b>${lbl}</b><small style="font-family:var(--mono);user-select:text">${esc(url)}</small></div><button class="btn sm" data-copy="${esc(url)}">Copier</button></div>`;
+  openModal('Accès réseau — autres ordinateurs', `<div id="netBox">
+    ${!L.enabled ? '<div class="warnbox">L\'accès réseau est désactivé sur ce serveur.</div>' : ''}
+    <p class="info">Le <b>poste Synthé</b> peut tourner sur un <b>autre ordinateur</b> branché sur le même réseau (même box, switch ou Wi-Fi). Sur cet ordinateur, ouvrez Chrome ou Edge à l'adresse ci-dessous : rien à installer. Les graphismes restent dessinés ici, sur la régie : seuls les ordres passent sur le réseau.</p>
+    <div style="display:flex;align-items:center;gap:16px;margin:4px 0 16px"><div class="flabel" style="margin:0">CODE D'ACCÈS</div>
+      <div style="font:700 30px var(--mono);letter-spacing:8px;color:#fff;user-select:text">${esc(L.pin)}</div></div>
+    ${ips.length ? `<div style="display:flex;flex-direction:column;gap:6px">${ips.map(a => row('Poste Synthé — ' + esc(a.name), `http://${a.ip}:${L.port}/synthe`) + row('Overlay OBS / vMix (avec le code)', `http://${a.ip}:${L.port}/overlay?code=${L.pin}`)).join('')}</div>`
+      : '<div class="warnbox">Aucun réseau détecté : branchez cet ordinateur au réseau (câble ou Wi-Fi) puis rouvrez cette fenêtre.</div>'}
+    <div class="flabel" style="margin-top:16px">Postes connectés</div>
+    <p class="info" style="margin-top:4px">${postes.length ? postes.map(x => `${x.role === 'synthe' ? 'Poste Synthé' : 'Overlay'} — <b>${esc(x.ip)}</b>`).join('<br>') : 'Aucun pour le moment.'}</p>
+    <p class="hint">Au premier lancement, Windows demande d'autoriser ScènePro sur le <b>pare-feu</b> : cochez <b>Réseaux privés</b> et validez. Si un autre ordinateur n'arrive pas à se connecter, vérifiez que le réseau Windows est bien en mode « Privé ».<br>
+    Le code protège l'accès : ne le communiquez qu'à votre équipe. La régie, la diffusion et vos clés de stream restent accessibles uniquement sur cet ordinateur.</p></div>`, true);
+  $('#mBody').querySelectorAll('[data-copy]').forEach(b => b.onclick = () => navigator.clipboard.writeText(b.dataset.copy).then(() => toast('Adresse copiée.'), () => toast('Copie impossible : sélectionnez le texte.')));
+}
+
+/* =========================================================
+   ENREGISTREMENT — flux des bus pour le poste Enregistrement
+   Le serveur indique quels bus sont demandés ({type:'busfeed', want}) ; pour chacun, la régie compose
+   l'image (programme + PIP + synthés de ce bus + noir) et l'envoie en WebM sur /bus-src?source=X.
+   Son : master WEB de la table de mixage pour PGM 1 et WEB ; PGM 2 et 3 sont muets.
+   ========================================================= */
+const FEED_BUS = {pgm1: 0, pgm2: 1, pgm3: 2};
+const FEED_RES = {'480': [854, 480], '720': [1280, 720], '1080': [1920, 1080]};
+function composeBus(g, W, H, st, gfxKey){
+  g.globalAlpha = 1; g.fillStyle = '#000'; g.fillRect(0, 0, W, H);
+  for(const layer of st.el.querySelectorAll('.layer')){
+    const m = layer.firstChild; if(!m) continue;
+    const op = parseFloat(getComputedStyle(layer).opacity); if(!(op > 0)) continue;
+    let w, h;
+    if(m.tagName === 'VIDEO'){ if(m.readyState < 2) continue; w = m.videoWidth; h = m.videoHeight; }
+    else { if(!m.complete || !m.naturalWidth) continue; w = m.naturalWidth; h = m.naturalHeight; }
+    if(!w || !h) continue;
+    const k = Math.min(W / w, H / h);
+    g.globalAlpha = op;
+    try{ g.drawImage(m, (W - w * k) / 2, (H - h * k) / 2, w * k, h * k); }catch(e){}
+  }
+  const pe = st.pipEl, pm = pe && pe.firstChild;
+  if(pm){
+    const op = parseFloat(getComputedStyle(pe).opacity), sr = st.el.getBoundingClientRect(), pr = pe.getBoundingClientRect();
+    if(op > 0 && sr.width){
+      const x = (pr.left - sr.left) / sr.width * W, y = (pr.top - sr.top) / sr.height * H, w = pr.width / sr.width * W, h = pr.height / sr.height * H;
+      let mw, mh, ok = true;
+      if(pm.tagName === 'VIDEO'){ ok = pm.readyState >= 2; mw = pm.videoWidth; mh = pm.videoHeight; } else { ok = pm.complete; mw = pm.naturalWidth; mh = pm.naturalHeight; }
+      if(ok && mw && mh){
+        g.globalAlpha = op;
+        const k = Math.max(w / mw, h / mh), sw = w / k, sh = h / k;
+        try{ g.drawImage(pm, (mw - sw) / 2, (mh - sh) / 2, sw, sh, x, y, w, h); }catch(e){}
+        if(!pe.classList.contains('noborder')){ g.strokeStyle = 'rgba(255,255,255,.9)'; g.lineWidth = Math.max(2, W / 640); g.strokeRect(x, y, w, h); }
+      }
+    }
+  }
+  if(typeof Gfx !== 'undefined' && Gfx.ready && Gfx.filter){ g.globalAlpha = 1; try{ Gfx.scene.draw(g, W, H, performance.now(), Gfx.filter(gfxKey)); }catch(e){} }
+  const b = parseFloat(getComputedStyle(st.blk).opacity);
+  if(b > 0){ g.globalAlpha = b; g.fillStyle = '#000'; g.fillRect(0, 0, W, H); }
+  g.globalAlpha = 1;
+}
+const Feeds = {
+  active: {}, worker: null, timer: null,
+  bus(src){ return Engine.buses[src === 'web' ? state.route[WEB] : FEED_BUS[src]]; },
+  gfxKey(src){ if(src === 'web') return 'web'; const b = this.bus(src); return b.follow ? 'pgm1' : src; },
+  want(w){
+    ['pgm1', 'pgm2', 'pgm3', 'web'].forEach(s => {
+      const f = this.active[s], c = w[s];
+      if(c && !f) this.start(s, c);
+      else if(!c && f) this.stop(s);
+      else if(c && f && (c.res !== f.cfg.res || +c.fps !== +f.cfg.fps)){ this.stop(s); this.start(s, c); }
+    });
+    RecSt.render();
+  },
+  start(src, cfg){
+    const [W, H] = FEED_RES[cfg.res] || FEED_RES['1080'];
+    const canvas = document.createElement('canvas'); canvas.width = W; canvas.height = H;
+    const f = {src, cfg: {res: cfg.res, fps: +cfg.fps || 30}, canvas, g: canvas.getContext('2d', {alpha: false}), ws: null, rec: null};
+    this.active[src] = f;
+    composeBus(f.g, W, H, this.bus(src).mini, this.gfxKey(src));
+    this.ensureTimer();
+    this.connect(f);
+  },
+  connect(f){
+    if(this.active[f.src] !== f) return;
+    const ws = new WebSocket(`ws://${location.host}/bus-src?source=${f.src}`);
+    f.ws = ws;
+    ws.onopen = () => this.startRec(f);
+    ws.onclose = () => { if(f.rec){ try{ f.rec.stop(); }catch(e){} f.rec = null; } if(this.active[f.src] === f && f.ws === ws) setTimeout(() => this.connect(f), 2000); };
+  },
+  startRec(f){
+    if(f.rec){ const r = f.rec; f.rec = null; try{ r.ondataavailable = null; r.stop(); }catch(e){} }
+    if(!f.ws || f.ws.readyState !== 1) return;
+    const stream = f.canvas.captureStream(f.cfg.fps);
+    if(f.src === 'pgm1' || f.src === 'web'){ Mixer.init(); Mixer.resume(); if(Mixer.dest){ const at = Mixer.dest.stream.getAudioTracks()[0]; if(at) stream.addTrack(at); } }
+    const types = ['video/webm;codecs=h264,opus', 'video/webm;codecs=vp8,opus', 'video/webm'];
+    const mime = types.find(t => MediaRecorder.isTypeSupported(t)) || '';
+    let rec;
+    try{ rec = new MediaRecorder(stream, {mimeType: mime, videoBitsPerSecond: f.canvas.width >= 1920 ? 16e6 : 10e6, audioBitsPerSecond: 192000, videoKeyFrameIntervalDuration: 1000}); }
+    catch(e){ toast('Enregistrement ' + f.src.toUpperCase() + ' : encodeur indisponible (' + e.message + ')'); return; }
+    f.rec = rec;
+    f.ws.send(JSON.stringify({type: 'init', mime, w: f.canvas.width, h: f.canvas.height, fps: f.cfg.fps}));
+    rec.ondataavailable = ev => { if(f.rec === rec && ev.data && ev.data.size && f.ws && f.ws.readyState === 1) f.ws.send(ev.data); };
+    rec.start(250);
+  },
+  restart(src){ const f = this.active[src]; if(f) this.startRec(f); },
+  stop(src){
+    const f = this.active[src]; if(!f) return;
+    delete this.active[src];
+    if(f.rec){ try{ f.rec.ondataavailable = null; f.rec.stop(); }catch(e){} f.rec = null; }
+    if(f.ws){ const w = f.ws; f.ws = null; try{ w.close(); }catch(e){} }
+    if(!Object.keys(this.active).length) this.stopTimer();
+  },
+  ensureTimer(){
+    if(this.worker || this.timer) return;
+    try{
+      const src = 'let t;onmessage=e=>{clearInterval(t);if(e.data>0)t=setInterval(()=>postMessage(0),e.data)}';
+      this.worker = new Worker(URL.createObjectURL(new Blob([src], {type: 'text/javascript'})));
+      this.worker.onmessage = () => this.tick();
+      this.worker.postMessage(1000 / 30);
+    }catch(e){ this.timer = setInterval(() => this.tick(), 1000 / 30); }
+  },
+  stopTimer(){
+    if(this.worker){ this.worker.postMessage(0); this.worker.terminate(); this.worker = null; }
+    if(this.timer){ clearInterval(this.timer); this.timer = null; }
+  },
+  tick(){ for(const f of Object.values(this.active)){ try{ composeBus(f.g, f.canvas.width, f.canvas.height, this.bus(f.src).mini, this.gfxKey(f.src)); }catch(e){} } },
+};
+// état des postes Enregistrement (relayé par le serveur) et commandes REC depuis la régie
+const RecSt = {
+  postes: [], regieSources: [],
+  update(m){ this.postes = m.postes || []; this.render(); },
+  status(src){
+    let st = '';
+    this.postes.forEach(p => { const s = p.s && p.s.sources && p.s.sources[src]; if(!s) return; if(s.status === 'rec') st = 'rec'; else if(s.status === 'wait' && st !== 'rec') st = 'wait'; });
+    return st;
+  },
+  toggle(arg){
+    if(!this.postes.length){ toast('Aucun poste Enregistrement connecté. Ouvrez « ScènePro Enregistrement » et réglez l\'adresse de cette régie.'); return; }
+    if(Remote.ws && Remote.ws.readyState === 1) Remote.ws.send(JSON.stringify({type: 'enr-cmd', cmd: 'enr-toggle', arg: arg || null}));
+  },
+  render(){
+    const p = $('#pillEnr'); if(!p) return;
+    const recs = ['pgm1', 'pgm2', 'pgm3', 'web'].filter(s => this.status(s) === 'rec');
+    const waits = ['pgm1', 'pgm2', 'pgm3', 'web'].filter(s => this.status(s) === 'wait');
+    p.className = 'spill ' + (recs.length ? 'on' : waits.length ? 'lv-wait' : '');
+    $('#enrLbl').textContent = !this.postes.length ? 'ENR' : recs.length ? 'ENR ' + recs.map(s => s === 'web' ? 'WEB' : 'P' + s.slice(3)).join('+') : 'ENR PRÊT';
+    p.title = !this.postes.length ? 'Poste Enregistrement : aucun connecté' :
+      this.postes.map(x => `${(x.s && x.s.poste) || x.ip} : ` + ['pgm1', 'pgm2', 'pgm3', 'web'].map(s => { const v = x.s && x.s.sources && x.s.sources[s]; return v && v.status !== 'idle' ? `${s.toUpperCase()} ${v.status === 'rec' ? '● ' + fmt((v.uptime || 0) / 1000) : 'attente'}` : null; }).filter(Boolean).join(', ') || 'prêt').join('\n');
+    renderMultiview();
+  },
+};
+$('#pillEnr').onclick = () => {
+  if(!RecSt.postes.length){ toast('Aucun poste Enregistrement connecté. Ouvrez « ScènePro Enregistrement » (raccourci du Bureau) et indiquez l\'adresse de cette régie.'); return; }
+  const recs = ['pgm1', 'pgm2', 'pgm3', 'web'].filter(s => RecSt.status(s) === 'rec');
+  if(recs.length){ if(confirm('Arrêter les enregistrements en cours (' + recs.map(s => s.toUpperCase()).join(', ') + ') ?')) Remote.ws.send(JSON.stringify({type: 'enr-cmd', cmd: 'enr-stop', arg: null})); }
+  else Remote.ws.send(JSON.stringify({type: 'enr-cmd', cmd: 'enr-start', arg: null}));
+};
+
+/* ---------------- Programmes : reportages / clips balancés par le poste Programmes ----------------
+   Le poste envoie un ordre (via le serveur) ; la régie lit le fichier depuis le serveur sur le PGM demandé,
+   en mémorisant ce qui était à l'antenne pour le rendre à la fin du programme (ou sur « Rendre l'antenne »). */
+const Prog = {
+  win: null, postes: [], lastSent: '',
+  item(p){
+    const id = 'prog-' + p.id;
+    let it = progItems.get(id);
+    if(!it){ it = baseItem({id, type: 'video', prog: true}); progItems.set(id, it); }
+    Object.assign(it, {name: p.name || 'Programme', fileName: p.name || '', src: location.origin + p.url, kind: p.kind || 'video',
+      thumb: p.thumb || null, duration: p.duration || null, volume: clamp(p.volume == null ? 1 : +p.volume, 0, 1), audio: true,
+      loop: p.endAction === 'loop', endAction: p.endAction || 'back', status: 'ready'});
+    return it;
+  },
+  bus(n){ return Engine.buses[clamp((+n || 1) - 1, 0, NBUS - 1)]; },
+  run(m){
+    const fade = m.fade == null ? state.fadeMs : clamp(+m.fade || 0, 0, 10000);
+    if(m.action === 'stopall'){ Engine.buses.forEach(b => { if(b.item && b.item.prog) this.giveBack(b, fade); }); }
+    else {
+      const b = this.bus(m.bus), cur = b.item, isProg = !!(cur && cur.prog);
+      if(m.action === 'take'){
+        if(!m.prog) return;
+        const it = this.item(m.prog);
+        if(b.follow){ b.follow = false; savePrefs(); }
+        // on mémorise ce qui était à l'antenne (pas un autre programme) pour le rendre ensuite
+        if(!isProg){ const mv = b.master().video; b.progPrev = {id: cur ? cur.id : null, at: cur && cur.type === 'video' && mv ? mv.currentTime : 0, black: b.black}; }
+        b.go(it, fade, Math.max(0, +m.startAt || 0));
+        toast(`${b.name} : programme « ${it.name} » à l'antenne.`);
+      }
+      else if(m.action === 'stop'){ if(isProg) this.giveBack(b, fade); }
+      else if(m.action === 'pause'){ if(isProg) b.togglePause(); }
+      else if(m.action === 'restart'){ if(isProg) b.restart(); }
+    }
+    render(); this.push(true);
+  },
+  // rend l'antenne : retour au média d'avant le programme (là où il en était), sinon fondu au noir
+  giveBack(b, fade = state.fadeMs){
+    const cur = b.item; if(!cur || !cur.prog) return;
+    const p = b.progPrev; b.progPrev = null;
+    const prev = p && getItem(p.id);
+    if(isReady(prev) && !prev.prog){ b.go(prev, fade, p.at || 0); if(p.black) b.setBlack(true, 0); }
+    else {
+      b.setBlack(true, fade);
+      setTimeout(() => { if(b.item === cur){ b.stages().forEach(s => s.clear()); b.programId = null; b.setBlack(false, 0); render(); } }, fade + 80);
+    }
+    render();
+  },
+  status(){
+    return {buses: Engine.buses.map(b => {
+      const it = b.item, mv = b.master() && b.master().video, prog = !!(it && it.prog);
+      return {pgm: b.i + 1, prog: prog ? it.id.slice(5) : null, name: it ? it.name : null, type: it ? it.type : null,
+        t: prog && mv ? Math.round(mv.currentTime * 10) / 10 : 0, dur: prog ? (mv && isFinite(mv.duration) ? Math.round(mv.duration * 10) / 10 : it.duration || 0) : 0,
+        paused: b.paused, black: b.black, follow: b.follow, routes: b.routes().map(r => ROUTE_SHORT[r]), onAir: b.onAir()};
+    })};
+  },
+  push(force){
+    if(!Remote.connected || !Remote.ws || Remote.ws.readyState !== 1) return;
+    const j = JSON.stringify(this.status());
+    if(force || j !== this.lastSent){ this.lastSent = j; Remote.ws.send(JSON.stringify({type: 'progstatus', s: JSON.parse(j)})); }
+    renderProgPill();
+  },
+  open(){
+    if(!/^https?:/.test(location.protocol)){ toast('Le poste Programmes nécessite de lancer ScènePro avec l\'application ou « Lancer ScenePro.bat ».'); return; }
+    if(this.win && !this.win.closed){ this.win.focus(); return; }
+    this.win = window.open('/programmes', 'scenepro_programmes', 'popup=yes,width=1500,height=900');
+    if(!this.win) toast('La fenêtre du poste Programmes a été bloquée. Autorisez les fenêtres pop-up pour ScènePro.');
+  },
+};
+function renderProgPill(){
+  const p = $('#pillProg'); if(!p) return;
+  const on = Engine.buses.filter(b => b.item && b.item.prog);
+  p.classList.toggle('on', on.length > 0);
+  if(on.length){
+    const b = on[0], mv = b.master().video, rem = mv && isFinite(mv.duration) ? mv.duration - mv.currentTime : 0;
+    $('#progLbl').textContent = `PROG ${on.map(x => x.name).join('+')}${rem > 0 && !b.item.loop ? ' · −' + fmt(rem) : ''}`;
+  } else $('#progLbl').textContent = 'PROGRAMMES';
+  p.title = (Prog.postes.length ? 'Postes Programmes connectés : ' + Prog.postes.join(', ') + '\n' : '') + 'Programmes (reportages, clips) — cliquer pour ouvrir le poste Programmes';
+}
+setInterval(() => Prog.push(false), 500);
+
+/* ---------------- Démarrage ---------------- */
+Engine.pvw = new Stage(window, $('#pvwStage'), {});
+for(let i = 0; i < NBUS; i++) Engine.buses.push(new Bus(i));
+buildMultiview();
+// vignette multiview de chaque bus ; seule celle du PGM 1 envoie le son dans la table de mixage
+Engine.buses.forEach(b => b.mini = new Stage(window, $('#mvStage' + b.i), {abus: b.i === 0 ? 0 : null, owner: b}));
+Engine.sel = Engine.buses[0];
+Engine.big = new Stage(window, $('#pgmStage'), {owner: Engine.sel});
+Engine.startTick();
+Gfx.init();
+render();
+requestAnimationFrame(meterLoop);
+(async () => {
+  try{ const p = await DB.get('kv', 'prefs'); if(p){ if(Array.isArray(p.route) && p.route.length === 4) state.route = p.route.map(x => clamp(+x || 0, 0, NBUS - 1));
+    if(Array.isArray(p.follow)) p.follow.forEach((f, i) => { if(i > 0 && Engine.buses[i]) Engine.buses[i].follow = !!f; });
+    state.fadeMs = p.fadeMs || state.fadeMs; } }catch(e){}
+  await Mixer.load(); Mixer.init();
+  try{ await restore(await DB.get('kv', 'current')); }catch(e){}
+  await Mixer.restoreInputs();
+  await Live.check();
+  Remote.connect();
+  render();
+})();
+</script>
+</body>
+</html>

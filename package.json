@@ -1,0 +1,106 @@
+{
+  "name": "scenepro",
+  "productName": "ScènePro",
+  "version": "2.0.0",
+  "description": "Régie vidéo pour conférences et événements : 3 programmes, sorties HDMI, diffusion en ligne, mixage audio.",
+  "main": "main.js",
+  "author": "ScènePro",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "serveur": "node server.js",
+    "build": "electron-builder --win --publish never",
+    "release": "electron-builder --win --publish always"
+  },
+  "dependencies": {
+    "electron-updater": "6.3.9",
+    "ffmpeg-static": "5.2.0",
+    "ws": "8.18.0"
+  },
+  "devDependencies": {
+    "electron": "33.2.1",
+    "electron-builder": "25.1.8"
+  },
+  "build": {
+    "appId": "fr.scenepro.regie",
+    "productName": "ScènePro",
+    "copyright": "ScènePro",
+    "artifactName": "ScenePro-Setup-${version}.${ext}",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "main.js",
+      "server.js",
+      "ScenePro.html",
+      "Synthe.html",
+      "Programmes.html",
+      "overlay.html",
+      "gfx-render.js",
+      "synthe.js",
+      "station.js",
+      "diffusion.html",
+      "busfeed.js",
+      "recorder.js",
+      "enregistreur.html",
+      "package.json",
+      "build/icon.png",
+      "build/icons/*.png",
+      "build/icons/*.svg",
+      "node_modules/**/*"
+    ],
+    "asarUnpack": [
+      "node_modules/ffmpeg-static/**"
+    ],
+    "extraResources": [
+      {
+        "from": "build/icons",
+        "to": "icons",
+        "filter": [
+          "*.ico",
+          "*.png"
+        ]
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icons/regie.ico"
+    },
+    "nsis": {
+      "installerIcon": "build/icons/regie.ico",
+      "uninstallerIcon": "build/icons/regie.ico",
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "ScènePro",
+      "uninstallDisplayName": "ScènePro",
+      "language": "1036",
+      "installerLanguages": [
+        "fr_FR"
+      ],
+      "include": "build/installer.nsh"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "releaseType": "release"
+      }
+    ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Domi-Dom33/ScenePro.git"
+  },
+  "homepage": "https://github.com/Domi-Dom33/ScenePro"
+}

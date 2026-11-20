@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ScènePro — Enregistrement</title>
+<link rel="icon" href="/logo.png">
+<style>
+:root{--bg:#0a0c0f;--panel:#12151a;--panel2:#171b21;--panel3:#1f242c;--line:#262c35;--line2:#343c48;--text:#e7eaee;--muted:#8b93a0;--dim:#5b6370;
+  --green:#1fd16b;--red:#ff3b3b;--red-bg:rgba(255,59,59,.12);--amber:#ffb020;--accent:#3d8bff;--mono:"Cascadia Mono","Consolas",ui-monospace,monospace}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font:13px/1.4 "Segoe UI Variable Text","Segoe UI",system-ui,sans-serif;user-select:none}
+button,input,select{font:inherit;color:inherit}
+header{display:flex;align-items:center;gap:12px;height:48px;padding:0 16px;background:#0d1014;border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:9px;font-weight:700;font-size:15px}
+.mark{width:22px;height:22px;border-radius:6px;background:linear-gradient(135deg,var(--red),#b0161f);display:grid;place-items:center}
+.mark i{width:8px;height:8px;border-radius:50%;background:#fff}
+.brand small{color:var(--muted);font-weight:500;font-size:12px}
+.sp{flex:1}
+.pill{display:flex;align-items:center;gap:7px;height:28px;padding:0 10px;border-radius:6px;background:var(--panel2);border:1px solid var(--line);font-size:11px;font-weight:700;letter-spacing:1px;color:var(--muted);white-space:nowrap}
+.pill .led{width:8px;height:8px;border-radius:50%;background:var(--dim)}
+.pill.ok{color:#fff;border-color:rgba(31,209,107,.5)}.pill.ok .led{background:var(--green);box-shadow:0 0 8px var(--green)}
+.pill.wait .led{background:var(--amber);animation:blink 1s infinite}
+.pill.bad{color:#ffb3b3;border-color:rgba(255,59,59,.5)}.pill.bad .led{background:var(--red)}
+.clock{font-family:var(--mono);font-size:17px;color:#cfd5dc;min-width:92px;text-align:right}
+@keyframes blink{50%{opacity:.25}}@keyframes pulse{50%{opacity:.4}}
+main{padding:14px 16px;display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:14px}
+.bar{display:flex;align-items:center;gap:12px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px;grid-column:1/-1}
+.big{height:44px;padding:0 22px;border-radius:8px;border:1px solid var(--line2);background:var(--panel2);font-weight:800;letter-spacing:1.5px;cursor:pointer}
+.big.rec{background:var(--red);border-color:var(--red);color:#fff}
+.big.rec.on{animation:pulse 1.4s infinite}
+.big:hover{filter:brightness(1.1)}
+.tot{font-family:var(--mono);font-size:26px;font-weight:600}
+.tot.on{color:var(--red)}
+.info{color:var(--muted);font-size:12.5px}
+.info b{color:var(--text)}
+.tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-content:start}
+.tile{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.tile.on{border-color:var(--red);box-shadow:0 0 0 1px var(--red),0 0 24px rgba(255,59,59,.12)}
+.tile.waiting{border-color:rgba(255,176,32,.6)}
+.th{display:flex;align-items:center;gap:8px}
+.tag{font-size:12px;font-weight:800;letter-spacing:1.4px;padding:3px 9px;border-radius:4px;background:var(--panel3)}
+.tile.on .tag{background:var(--red);color:#fff}
+.chip{margin-left:auto;font-size:10.5px;font-weight:800;letter-spacing:1px;padding:3px 8px;border-radius:4px;background:var(--panel3);color:var(--muted)}
+.chip.rec{background:var(--red);color:#fff;animation:pulse 1.4s infinite}
+.chip.wait{background:rgba(255,176,32,.18);color:#ffd27a}
+.chip.err{background:rgba(255,59,59,.18);color:#ffb3b3}
+.time{font-family:var(--mono);font-size:34px;font-weight:600;letter-spacing:1px}
+.tile.on .time{color:#fff}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.stats div{background:var(--panel2);border-radius:6px;padding:6px 8px}
+.stats small{display:block;font-size:9.5px;letter-spacing:1px;font-weight:700;color:var(--muted)}
+.stats b{font-family:var(--mono);font-size:13px}
+.file{font-family:var(--mono);font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-height:15px}
+.err{font-size:11.5px;color:#ffb3b3;min-height:15px}
+.trow{display:flex;gap:8px;align-items:center}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:32px;padding:0 12px;border-radius:7px;background:var(--panel2);border:1px solid var(--line);cursor:pointer;white-space:nowrap}
+.btn:hover{border-color:var(--line2);background:var(--panel3)}
+.btn.recb{flex:1;height:40px;font-weight:800;letter-spacing:1.2px;background:linear-gradient(#3a1416,#251012);border-color:rgba(255,59,59,.55)}
+.btn.recb.on{background:var(--red);border-color:var(--red);color:#fff}
+.arm{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--muted);cursor:pointer}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:12px;align-self:start}
+.panel h3{margin:0;font-size:11px;letter-spacing:1.4px;color:#cfd5dc;text-transform:uppercase}
+label.f{display:block;font-size:10.5px;letter-spacing:1.1px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:5px}
+.txt{width:100%;height:32px;padding:0 10px;border-radius:6px;background:var(--bg);border:1px solid var(--line2);outline:none}
+.txt:focus{border-color:var(--accent)}
+.row2{display:flex;gap:6px}.row2 .txt{flex:1;min-width:0}
+.seg{display:flex;background:var(--bg);border:1px solid var(--line2);border-radius:7px;padding:2px;gap:2px}
+.seg button{flex:1;height:28px;border:0;border-radius:5px;background:transparent;color:var(--muted);cursor:pointer}
+.seg button.on{background:var(--panel3);color:#fff;box-shadow:inset 0 0 0 1px var(--line2)}
+.hint{font-size:11.5px;color:var(--dim);line-height:1.45}
+.sep{height:1px;background:var(--line)}
+.recent{display:flex;flex-direction:column;gap:4px;max-height:260px;overflow:auto}
+.recent div{display:flex;gap:8px;align-items:center;padding:5px 8px;border-radius:6px;background:var(--panel2);cursor:pointer;font-size:11.5px}
+.recent div:hover{background:var(--panel3)}
+.recent span{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:var(--mono)}
+.recent i{font-style:normal;color:var(--muted);font-family:var(--mono)}
+@media (max-width:1000px){main{grid-template-columns:1fr}.tiles{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand"><img src="/logo.png" alt="" width="26" height="26">ScènePro <small>Enregistrement</small></div>
+  <div class="sp"></div>
+  <div class="pill" id="pLink"><i class="led"></i><span id="lLink">RÉGIE : HORS LIGNE</span></div>
+  <div class="pill" id="pDisk"><span id="lDisk">DISQUE —</span></div>
+  <div class="clock" id="clock">00:00:00</div>
+</header>
+<main>
+  <div class="bar">
+    <button class="big rec" id="recAll">● REC</button>
+    <button class="big" id="stopAll">■ STOP</button>
+    <div class="tot" id="tot">00:00:00</div>
+    <div class="sp"></div>
+    <div class="info" id="summary"></div>
+  </div>
+  <section class="tiles" id="tiles"></section>
+  <aside class="panel">
+    <h3>Liaison avec la régie</h3>
+    <div><label class="f">Adresse de la régie</label><div class="row2"><input class="txt" id="cRegie" placeholder="localhost:7350 ou 192.168.1.20:7350" spellcheck="false"><button class="btn" id="bRe">Connecter</button></div></div>
+    <div><label class="f">Code d'accès (autre ordinateur)</label><input class="txt" id="cCode" placeholder="6 chiffres — Régie › Sorties › Accès réseau" inputmode="numeric" maxlength="6"></div>
+    <div class="hint" id="linkHint"></div>
+    <div class="sep"></div>
+    <h3>Fichiers</h3>
+    <div><label class="f">Dossier d'enregistrement</label><div class="row2"><input class="txt" id="cFolder" spellcheck="false"><button class="btn" id="bPick" title="Choisir un dossier">…</button><button class="btn" id="bOpen" title="Ouvrir le dossier">Ouvrir</button></div></div>
+    <div><label class="f">Nom du show (préfixe des fichiers)</label><input class="txt" id="cPrefix" placeholder="ex. Conférence-Lyon"></div>
+    <div><label class="f">Format</label><div class="seg" id="sFormat"><button data-v="mp4">MP4 (montage)</button><button data-v="mkv">MKV (sans perte)</button></div>
+      <div class="hint" id="fmtHint"></div></div>
+    <div><label class="f">Qualité demandée à la régie</label><div class="seg" id="sRes"><button data-v="720">720p</button><button data-v="1080">1080p</button></div></div>
+    <div class="sep"></div>
+    <h3>Derniers fichiers</h3>
+    <div class="recent" id="recent"><div style="cursor:default"><span style="font-family:inherit;color:var(--dim)">Aucun enregistrement pour l'instant.</span></div></div>
+  </aside>
+</main>
+<script>
+'use strict';
+const $ = s => document.querySelector(s);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const SOURCES = ['pgm1', 'pgm2', 'pgm3', 'web'];
+const NAMES = {pgm1: 'PGM 1', pgm2: 'PGM 2', pgm3: 'PGM 3', web: 'WEB'};
+const DESC = {pgm1: 'Programme principal · avec le son', pgm2: 'Écrans de salle · sans son', pgm3: 'Écrans de salle · sans son', web: 'Image envoyée sur le web · son WEB'};
+const hms = ms => { let s = Math.floor(ms / 1000); const h = Math.floor(s / 3600); s %= 3600; return `${String(h).padStart(2,'0')}:${String(Math.floor(s / 60)).padStart(2,'0')}:${String(s % 60).padStart(2,'0')}`; };
+const mo = b => b >= 1e9 ? (b / 1e9).toFixed(2) + ' Go' : (b / 1e6).toFixed(1) + ' Mo';
+let st = null, ws = null;
+
+$('#tiles').innerHTML = SOURCES.map(k => `
+  <div class="tile" data-k="${k}">
+    <div class="th"><span class="tag">${NAMES[k]}</span><span class="info">${DESC[k]}</span><span class="chip" data-x="chip">PRÊT</span></div>
+    <div class="time" data-x="time">00:00:00</div>
+    <div class="stats"><div><small>TAILLE</small><b data-x="size">—</b></div><div><small>DÉBIT</small><b data-x="kbps">—</b></div><div><small>PARTIE</small><b data-x="part">—</b></div></div>
+    <div class="file" data-x="file"></div>
+    <div class="err" data-x="err"></div>
+    <div class="trow"><button class="btn recb" data-x="rec">● REC</button><label class="arm" title="Inclure ce bus quand on appuie sur le grand bouton REC"><input type="checkbox" data-x="arm"> dans REC global</label></div>
+  </div>`).join('');
+
+function send(o){ if(ws && ws.readyState === 1) ws.send(JSON.stringify(o)); }
+function connect(){
+  ws = new WebSocket(`ws://${location.host}/ui`);
+  ws.onmessage = e => { try{ st = JSON.parse(e.data); render(); }catch(err){} };
+  ws.onclose = () => { $('#lLink').textContent = 'MOTEUR ARRÊTÉ'; $('#pLink').className = 'pill bad'; setTimeout(connect, 2000); };
+}
+let editing = null;
+['cRegie', 'cCode', 'cFolder', 'cPrefix'].forEach(id => {
+  const el = $('#' + id);
+  el.addEventListener('focus', () => editing = id);
+  el.addEventListener('blur', () => { editing = null; saveCfg(); });
+  el.addEventListener('keydown', e => { if(e.key === 'Enter') el.blur(); });
+});
+function saveCfg(){ send({type: 'cfg', cfg: {regie: $('#cRegie').value, code: $('#cCode').value, folder: $('#cFolder').value, prefix: $('#cPrefix').value}}); }
+$('#bRe').onclick = () => { saveCfg(); send({type: 'reconnect'}); };
+$('#bOpen').onclick = () => send({type: 'openFolder'});
+$('#bPick').onclick = () => send({type: 'pickFolder'});
+$('#sFormat').onclick = e => { const b = e.target.closest('button'); if(b) send({type: 'cfg', cfg: {format: b.dataset.v}}); };
+$('#sRes').onclick = e => { const b = e.target.closest('button'); if(b) send({type: 'cfg', cfg: {res: b.dataset.v}}); };
+$('#recAll').onclick = () => send({type: 'recAll', on: true});
+$('#stopAll').onclick = () => { if(confirm('Arrêter tous les enregistrements ?')) send({type: 'recAll', on: false}); };
+$('#tiles').addEventListener('click', e => {
+  const t = e.target.closest('.tile'); if(!t || !st) return;
+  const k = t.dataset.k;
+  if(e.target.closest('[data-x=rec]')){ const on = st.sources[k].status === 'idle'; if(!on && !confirm(`Arrêter l'enregistrement ${NAMES[k]} ?`)) return; send({type: 'rec', source: k, on}); }
+});
+$('#tiles').addEventListener('change', e => {
+  const t = e.target.closest('.tile'); if(!t || !e.target.matches('[data-x=arm]')) return;
+  send({type: 'cfg', cfg: {armed: {[t.dataset.k]: e.target.checked}}});
+});
+$('#recent').addEventListener('click', e => { const d = e.target.closest('[data-name]'); if(d) send({type: 'openFile', name: d.dataset.name}); });
+
+function render(){
+  if(!st) return;
+  const c = st.cfg, L = st.link;
+  if(editing !== 'cRegie') $('#cRegie').value = c.regie;
+  if(editing !== 'cCode') $('#cCode').value = c.code;
+  if(editing !== 'cFolder') $('#cFolder').value = c.folder;
+  if(editing !== 'cPrefix') $('#cPrefix').value = c.prefix || '';
+  $('#sFormat').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.v === c.format));
+  $('#sRes').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.v === c.res));
+  $('#fmtHint').textContent = c.format === 'mp4' ? 'Lisible partout (Premiere, DaVinci, VLC). Le fichier reste lisible même en cas de coupure.' : 'Copie exacte du flux, aucun réencodage. Idéal pour archiver ; à convertir pour certains logiciels de montage.';
+  const lp = $('#pLink');
+  const ok = L.status === 'connected';
+  lp.className = 'pill ' + (ok && L.regie ? 'ok' : ok || L.status === 'connecting' ? 'wait' : L.status === 'offline' ? '' : 'bad');
+  $('#lLink').textContent = ok ? (L.regie ? 'RÉGIE : CONNECTÉE' : 'SERVEUR OK · RÉGIE FERMÉE') : L.status === 'connecting' ? 'CONNEXION…' : L.status === 'refused' ? 'CODE REFUSÉ' : L.status === 'blocked' ? 'BLOQUÉ 2 MIN' : 'RÉGIE : HORS LIGNE';
+  $('#linkHint').textContent = ok ? (L.regie ? 'Prêt : les bus demandés sont envoyés par la régie au début de chaque enregistrement.' : 'Le serveur ScènePro répond mais la régie n\'est pas ouverte : les enregistrements démarreront dès son ouverture.')
+    : (L.err || 'Vous pouvez tout préparer hors ligne : le poste se connecte tout seul dès que la régie est allumée.');
+  const free = st.disk.free;
+  let totalKbps = 0, recN = 0, maxUp = 0;
+  SOURCES.forEach(k => {
+    const s = st.sources[k], t = document.querySelector(`.tile[data-k="${k}"]`), q = x => t.querySelector(`[data-x=${x}]`);
+    const on = s.status === 'rec', waiting = s.status === 'wait';
+    t.classList.toggle('on', on); t.classList.toggle('waiting', waiting);
+    const chip = q('chip');
+    chip.className = 'chip ' + (on ? 'rec' : waiting ? 'wait' : s.status === 'error' ? 'err' : '');
+    chip.textContent = on ? '● REC' : waiting ? 'ATTENTE DU FLUX' : s.status === 'error' ? 'ERREUR' : 'PRÊT';
+    q('time').textContent = hms(s.uptime);
+    q('size').textContent = s.bytes ? mo(s.bytes) : '—';
+    q('kbps').textContent = on ? (s.kbps / 1000).toFixed(1) + ' Mb/s' : '—';
+    q('part').textContent = s.part > 1 ? s.part : s.part ? '1' : '—';
+    q('file').textContent = s.file || '';
+    q('err').textContent = s.err || '';
+    const rb = q('rec'); rb.classList.toggle('on', s.status !== 'idle'); rb.textContent = s.status !== 'idle' ? '■ STOP' : '● REC';
+    const arm = q('arm'); arm.checked = !!c.armed[k];
+    if(s.status !== 'idle'){ recN++; maxUp = Math.max(maxUp, s.uptime); }
+    if(on) totalKbps += s.kbps;
+  });
+  $('#tot').textContent = hms(maxUp); $('#tot').classList.toggle('on', recN > 0);
+  $('#recAll').classList.toggle('on', recN > 0);
+  const armed = SOURCES.filter(k => c.armed[k]).map(k => NAMES[k]);
+  const remain = totalKbps > 0 ? free * 8 / 1000 / totalKbps * 1000 : 0;
+  $('#summary').innerHTML = `REC global : <b>${armed.join(' + ') || 'aucun bus coché'}</b>` + (recN ? ` · <b>${recN}</b> en cours` : '') + (remain ? ` · autonomie disque <b>${hms(remain)}</b>` : '');
+  $('#lDisk').textContent = free ? `DISQUE ${(free / 1e9).toFixed(0)} Go LIBRES` : 'DISQUE ?';
+  $('#pDisk').className = 'pill ' + (free && free < 20e9 ? 'bad' : '');
+  $('#recent').innerHTML = st.recent.length ? st.recent.map(r => `<div data-name="${esc(r.name)}" title="Ouvrir"><span>${esc(r.name)}</span><i>${mo(r.size)}</i></div>`).join('')
+    : '<div style="cursor:default"><span style="font-family:inherit;color:var(--dim)">Aucun enregistrement pour l\'instant.</span></div>';
+  document.title = (recN ? '● REC — ' : '') + 'ScènePro — Enregistrement';
+}
+setInterval(() => { $('#clock').textContent = new Date().toLocaleTimeString('fr-FR'); }, 500);
+connect();
+</script>
+</body>
+</html>

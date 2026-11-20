@@ -1,0 +1,603 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ScènePro — Synthé / Habillage</title>
+<!-- logo du poste Synthé (build/icons/synthe.png, réduit en 64 px) -->
+<link rel="icon" id="favicon" type="image/png" href="data:image/png;base64,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">
+<style>
+:root{
+  --bg:#0a0c0f;--panel:#12151a;--panel2:#171b21;--panel3:#1f242c;--line:#262c35;--line2:#343c48;
+  --text:#e7eaee;--muted:#8b93a0;--dim:#5b6370;
+  --green:#1fd16b;--green-bg:rgba(31,209,107,.12);--red:#ff3b3b;--red-bg:rgba(255,59,59,.12);
+  --amber:#ffb020;--accent:#3d8bff;
+  --mono:"Cascadia Mono","Consolas",ui-monospace,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:13px/1.35 "Segoe UI Variable Text","Segoe UI",system-ui,sans-serif;overflow:hidden;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;cursor:pointer}
+input,select,textarea{font:inherit;color:inherit}
+.app{display:grid;grid-template-rows:46px 1fr;height:100vh}
+header{display:flex;align-items:center;gap:10px;padding:0 12px;background:#0d1014;border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:9px;font-weight:700;font-size:15px}
+.brand .logo{width:24px;height:24px;display:block}
+.spacer{flex:1}
+.pill{display:flex;align-items:center;gap:7px;height:28px;padding:0 10px;border-radius:6px;background:var(--panel2);border:1px solid var(--line);color:var(--muted);font-size:11px;font-weight:700;letter-spacing:1px;white-space:nowrap}
+.pill .led{width:8px;height:8px;border-radius:50%;background:var(--dim)}
+.pill.ok{color:#fff;border-color:rgba(31,209,107,.5);background:var(--green-bg)}.pill.ok .led{background:var(--green);box-shadow:0 0 8px var(--green)}
+.pill.bad{color:#ffb3b3;border-color:rgba(255,59,59,.5);background:var(--red-bg)}.pill.bad .led{background:var(--red)}
+.tgl{height:30px;padding:0 12px;border-radius:6px;border:1px solid var(--line2);background:var(--panel2);color:var(--muted);font-weight:700;font-size:11px;letter-spacing:1px}
+.tgl.on{background:var(--red);border-color:var(--red);color:#fff;box-shadow:0 0 12px rgba(255,59,59,.35)}
+.btn{height:30px;padding:0 12px;border-radius:6px;border:1px solid var(--line2);background:var(--panel3);display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.btn:hover{border-color:#4a5462;background:#262c35}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.danger{color:#ff9d9d}
+.btn.sm{height:24px;padding:0 8px;font-size:12px}
+.btn.block{width:100%;justify-content:center}
+main{display:grid;grid-template-columns:330px 1fr 360px;min-height:0}
+.col{display:flex;flex-direction:column;min-height:0;border-right:1px solid var(--line)}
+.col:last-child{border-right:0}
+.colhead{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--line);font-size:11px;font-weight:700;letter-spacing:1.3px;color:var(--muted);text-transform:uppercase}
+.scroll{flex:1;overflow:auto;min-height:0}
+.add{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:10px 12px;border-bottom:1px solid var(--line)}
+.add button{height:30px;border-radius:6px;border:1px dashed var(--line2);background:transparent;color:#c9cfd6;font-size:12px}
+.add button:hover{border-color:var(--accent);color:#fff}
+.row{display:flex;align-items:center;gap:8px;padding:8px 10px 8px 12px;border-bottom:1px solid var(--line);cursor:pointer;position:relative}
+.row:hover{background:var(--panel)}
+.row.sel{background:var(--panel2);box-shadow:inset 3px 0 0 var(--green)}
+.row.on{box-shadow:inset 3px 0 0 var(--red)}
+.row.sel.on{box-shadow:inset 3px 0 0 var(--red),inset 6px 0 0 var(--green)}
+.row .num{font-family:var(--mono);color:var(--dim);width:18px;text-align:right;font-size:12px}
+.row .tag{font-size:9px;font-weight:800;letter-spacing:1px;padding:2px 5px;border-radius:4px;background:var(--panel3);color:var(--muted);flex:none;width:62px;text-align:center}
+.row .nm{flex:1;min-width:0}
+.row .nm b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}
+.row .nm small{display:block;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .tg{display:flex;gap:3px;margin-top:3px}
+.row .tg i{font-style:normal;font-size:9px;font-weight:800;letter-spacing:.5px;padding:1px 4px;border-radius:3px;background:rgba(255,59,59,.14);color:#ff9d9d}
+.row .tg i.none{background:rgba(255,176,32,.15);color:var(--amber)}
+.tgl:disabled{opacity:.4;cursor:default}
+.row .air{width:64px;height:30px;border-radius:6px;border:1px solid var(--line2);background:var(--panel3);font-size:11px;font-weight:800;letter-spacing:1px;color:var(--muted);flex:none}
+.row.on .air{background:var(--red);border-color:var(--red);color:#fff}
+.row .bar{position:absolute;left:0;bottom:0;height:2px;background:var(--red)}
+.center{display:flex;flex-direction:column;gap:12px;padding:12px;min-height:0;overflow:auto}
+.mons{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.mon{display:flex;flex-direction:column;gap:6px;min-width:0}
+.monhead{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:800;letter-spacing:1.3px}
+.monhead .t{padding:3px 8px;border-radius:4px}
+.mon.pvw .t{background:var(--green-bg);color:var(--green)}.mon.pgm .t{background:var(--red-bg);color:var(--red)}
+.monhead small{color:var(--muted);font-weight:500;letter-spacing:0;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.screen{position:relative;aspect-ratio:16/9;border-radius:6px;overflow:hidden;border:2px solid var(--line2);
+  background-color:#2a2f37;background-image:linear-gradient(45deg,#353b45 25%,transparent 25%,transparent 75%,#353b45 75%),linear-gradient(45deg,#353b45 25%,transparent 25%,transparent 75%,#353b45 75%);background-size:24px 24px;background-position:0 0,12px 12px}
+.screen.dark{background:#000}
+.mon.pvw .screen{border-color:rgba(31,209,107,.6)}.mon.pgm .screen{border-color:rgba(255,59,59,.7)}
+.screen canvas{position:absolute;inset:0;width:100%;height:100%}
+.take{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.take button{height:62px;border-radius:8px;border:1px solid var(--line2);background:var(--panel2);font-weight:800;letter-spacing:1.5px;font-size:15px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+.take button small{font-weight:500;letter-spacing:0;font-size:11px;color:var(--muted)}
+.take .go{background:var(--red);border-color:var(--red);color:#fff}.take .go small{color:#ffd6d6}
+.take .go:hover{filter:brightness(1.1)}
+.info{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px;color:var(--muted);line-height:1.55}
+.info b{color:var(--text)}
+.info code{font-family:var(--mono);color:#cfe0ff;user-select:all;font-size:12px}
+.ed{padding:12px}
+.field{margin-bottom:12px}
+.field label{display:block;font-size:11px;font-weight:700;letter-spacing:.8px;color:var(--muted);margin-bottom:5px;text-transform:uppercase}
+.txt{width:100%;height:32px;padding:0 10px;border-radius:6px;border:1px solid var(--line2);background:#0e1115;outline:none}
+textarea.txt{height:auto;min-height:70px;padding:8px 10px;resize:vertical;line-height:1.4}
+.txt:focus{border-color:var(--accent)}
+.seg{display:flex;gap:4px;flex-wrap:wrap}
+.seg button{flex:1;height:30px;padding:0 8px;border-radius:6px;border:1px solid var(--line2);background:var(--panel2);color:var(--muted);font-size:12px;white-space:nowrap}
+.seg button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.hint{font-size:12px;color:var(--dim);margin-top:4px}
+.sep{height:1px;background:var(--line);margin:16px 0}
+.colors{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.colors label{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);text-transform:none;letter-spacing:0;font-weight:500}
+input[type=color]{width:34px;height:26px;border:1px solid var(--line2);border-radius:5px;background:none;padding:1px}
+input[type=range]{width:100%}
+.logoPrev{display:flex;align-items:center;justify-content:center;height:80px;border-radius:6px;border:1px dashed var(--line2);background:#0e1115;margin-bottom:8px}
+.logoPrev img{max-height:70px;max-width:90%}
+.empty{padding:30px 16px;color:var(--dim);text-align:center}
+#modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:100}
+#modal.on{display:flex}
+.dlg{width:min(620px,92vw);max-height:86vh;overflow:auto;background:var(--panel);border:1px solid var(--line2);border-radius:12px;padding:18px 20px;box-shadow:0 20px 60px rgba(0,0,0,.6)}
+.dlg h3{margin:0 0 12px;font-size:16px}
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);background:#1d232b;border:1px solid var(--line2);padding:10px 16px;border-radius:8px;opacity:0;transition:.25s;pointer-events:none;z-index:120}
+#toast.on{opacity:1;transform:translateX(-50%)}
+kbd{font-family:var(--mono);font-size:11px;padding:1px 5px;border-radius:4px;background:var(--panel3);border:1px solid var(--line2)}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="brand"><img class="logo" id="brandLogo" alt="" width="24" height="24">ScènePro Synthé</div>
+    <button class="pill bad" id="conn" title="Connexion à la régie — cliquer pour régler l'adresse et le code"><i class="led"></i><span id="connLbl">HORS LIGNE</span></button>
+    <div class="spacer"></div>
+    <span style="color:var(--muted);font-size:11px;font-weight:700;letter-spacing:1px" title="Sorties de l'élément sélectionné">ÉLÉMENT SUR</span>
+    <span id="tgts" style="display:flex;gap:4px"></span>
+    <button class="btn" id="btnTheme">Charte graphique</button>
+    <button class="btn" id="btnMore">Fichier…</button>
+    <button class="btn danger" id="btnClear" title="Retirer tout l'habillage de l'antenne (Échap)">TOUT RETIRER</button>
+  </header>
+  <main>
+    <section class="col">
+      <div class="colhead">Conducteur<span class="spacer"></span><button class="btn sm" id="btnBulk" title="Coller une liste d'intervenants">Importer des noms</button></div>
+      <div class="add">
+        <button data-add="lower">+ Synthé</button><button data-add="logo">+ Logo</button><button data-add="ticker">+ Bandeau</button>
+        <button data-add="fullscreen">+ Carton</button><button data-add="badge">+ Badge</button><button data-add="clock">+ Horloge</button>
+      </div>
+      <div class="scroll" id="list"></div>
+    </section>
+    <section class="center">
+      <div class="mons">
+        <div class="mon pvw"><div class="monhead"><span class="t">PRÊT</span><small id="pvwName">—</small></div><div class="screen" id="pvwScr"><canvas id="pvwCv"></canvas></div></div>
+        <div class="mon pgm"><div class="monhead"><span class="t">ANTENNE</span><small id="pgmName">rien à l'antenne</small></div><div class="screen" id="pgmScr"><canvas id="pgmCv"></canvas></div></div>
+      </div>
+      <div class="take">
+        <button class="go" id="btnTake">ENVOYER / RETIRER<small>Entrée — élément sélectionné</small></button>
+        <button id="btnNextLower">SYNTHÉ SUIVANT<small>Flèche droite</small></button>
+        <button id="btnBg">FOND DAMIER<small>aperçu de la transparence</small></button>
+      </div>
+      <div class="info">
+        <b>Connexion à ScènePro.</b> Ce poste parle au serveur de la régie (<code id="srvUrl"></code>), sur cet ordinateur ou sur un autre du même réseau. Chaque élément s'incruste
+        sur les programmes cochés — <b>PGM 1</b>, <b>PGM 2</b>, <b>PGM 3</b> (moniteurs et sorties de la salle routées sur ce programme) et/ou <b>WEB</b> (diffusion en ligne) — avec les boutons en haut ou dans les réglages. Le fondu au noir de la régie recouvre aussi l'habillage.<br>
+        <b>Autres logiciels</b> (OBS, vMix, CasparCG…) : source navigateur <code id="ovUrl"></code> en 1920 × 1080, fond transparent.<br>
+        <b>Stream Deck / Companion</b> : <code id="apiUrl"></code> — actions <code>take/N</code>, <code>on/N</code>, <code>off/N</code>, <code>next</code>, <code>clear</code> (N = numéro dans le conducteur).<br>
+        Raccourcis : <kbd>↑</kbd> <kbd>↓</kbd> sélection · <kbd>Entrée</kbd> envoyer / retirer · <kbd>→</kbd> synthé suivant · <kbd>1</kbd>…<kbd>9</kbd> bascule l'élément n° · <kbd>Échap</kbd> tout retirer.
+      </div>
+    </section>
+    <section class="col">
+      <div class="colhead" id="edHead">Réglages</div>
+      <div class="scroll"><div class="ed" id="ed"></div></div>
+    </section>
+  </main>
+</div>
+<div id="modal"><div class="dlg" id="dlg"></div></div>
+<div id="toast"></div>
+<input type="file" id="fileImg" accept="image/*" hidden>
+<input type="file" id="fileJson" accept=".json,application/json" hidden>
+<script src="gfx-render.js"></script>
+<script>
+'use strict';
+const $ = s => document.querySelector(s);
+$('#brandLogo').src = $('#favicon').href; // même logo que l'icône de l'onglet / de la fenêtre
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid = () => Math.random().toString(36).slice(2, 10);
+const TYPES = {
+  lower:      {tag: 'SYNTHÉ',  def: () => ({name: 'Prénom Nom', role: 'Fonction', style: 'classique', pos: 'left', autoOff: 8})},
+  logo:       {tag: 'LOGO',    def: () => ({image: '', corner: 'tr', size: 0.12, opacity: 1, margin: 1, label: 'Logo'})},
+  ticker:     {tag: 'BANDEAU', def: () => ({label: 'INFO', text: 'Bienvenue à tous — la conférence reprendra à 14 h — suivez-nous en direct', speed: 140})},
+  fullscreen: {tag: 'CARTON',  def: () => ({title: 'PAUSE', subtitle: 'Reprise à 14 h 00', opacity: 0.92, image: ''})},
+  badge:      {tag: 'BADGE',   def: () => ({text: 'EN DIRECT', corner: 'tl', dot: true, color: ''})},
+  clock:      {tag: 'HORLOGE', def: () => ({mode: 'heure', seconds: false, target: '14:00', label: '', corner: 'tr'})},
+};
+const KEY = 'scenepro-synthe-v1';
+const OUTS = [['pgm1', 'PGM 1'], ['pgm2', 'PGM 2'], ['pgm3', 'PGM 3'], ['web', 'WEB']];
+const DEF_TARGETS = {pgm1: true, pgm2: false, pgm3: false, web: true};
+function fixTargets(t){ const o = {}; OUTS.forEach(([k]) => o[k] = !!(t && t[k])); return o; }
+let S = load();
+function load(){ let s = null; try{ s = JSON.parse(localStorage.getItem(KEY)); }catch(e){} return normalize(s); }
+function normalize(s){
+  if(!s || !Array.isArray(s.items)) s = {
+    targets: {salle: true, web: true}, exclusive: true, theme: Object.assign({}, GfxRender.DEFAULT_THEME), sel: null, dark: false,
+    items: [
+      Object.assign({id: uid(), type: 'lower', on: false}, TYPES.lower.def(), {name: 'Marie Dupont', role: 'Directrice générale'}),
+      Object.assign({id: uid(), type: 'lower', on: false}, TYPES.lower.def(), {name: 'Jean Martin', role: 'Responsable technique'}),
+      Object.assign({id: uid(), type: 'badge', on: false}, TYPES.badge.def()),
+      Object.assign({id: uid(), type: 'ticker', on: false}, TYPES.ticker.def()),
+      Object.assign({id: uid(), type: 'clock', on: false}, TYPES.clock.def()),
+      Object.assign({id: uid(), type: 'fullscreen', on: false}, TYPES.fullscreen.def()),
+    ]};
+  // cibles par élément (PGM 1, 2, 3, WEB) — reprise des anciens réglages SALLE / WEB
+  const old = s.targets || {salle: true, web: true};
+  s.theme = Object.assign({}, GfxRender.DEFAULT_THEME, s.theme || {});
+  s.items.forEach(i => { i.on = false; i.targets = fixTargets(i.targets || {pgm1: old.salle !== false, web: old.web !== false}); }); // au démarrage rien n'est à l'antenne
+  delete s.targets;
+  return s;
+}
+let saveT;
+function save(){
+  clearTimeout(saveT);
+  saveT = setTimeout(() => {
+    const txt = JSON.stringify(S);
+    // mode autonome : fichier du poste (aucune limite de taille) ; sinon mémoire du navigateur
+    if(Mode.autonome) fetch('api/conducteur', {method: 'PUT', headers: {'Content-Type': 'application/json'}, body: txt}).then(r => { if(!r.ok) throw 0; }).catch(() => toast('Sauvegarde du conducteur impossible.'));
+    try{ localStorage.setItem(KEY, txt); }catch(e){ if(!Mode.autonome) toast('Sauvegarde impossible (logo trop lourd ?)'); }
+  }, 300);
+}
+const sel = () => S.items.find(i => i.id === S.sel) || null;
+const label = it => it.type === 'lower' ? it.name : it.type === 'logo' ? (it.label || 'Logo') : it.type === 'ticker' ? (it.label || 'Bandeau') :
+  it.type === 'fullscreen' ? (it.title || 'Carton').split('\n')[0] : it.type === 'badge' ? it.text : it.type === 'clock' ? (it.mode === 'compte' ? 'Compte à rebours ' + it.target : 'Heure') : it.type;
+const sub = it => it.type === 'lower' ? it.role : it.type === 'ticker' ? it.text : it.type === 'fullscreen' ? it.subtitle : it.type === 'logo' ? (it.image ? 'coin ' + it.corner : 'aucune image') : it.type === 'clock' ? (it.label || '') : '';
+
+/* ---------------- connexion au serveur de la régie ---------------- */
+/* Mode : « autonome » = poste lancé seul (ScènePro.exe --synthe, Lancer Synthe.bat) ; il marche sans la régie
+   et s'y connecte quand elle tourne. Sinon la page est servie par la régie elle-même (/synthe). */
+const Mode = {
+  autonome: false, localCodes: [],
+  servedByRegie(){ return !this.autonome && /^https?:/.test(location.protocol); },
+  host(){
+    if(this.servedByRegie()) return location.host;
+    let h = ''; try{ h = localStorage.getItem('scenepro-synthe-regie') || ''; }catch(e){}
+    return h || 'localhost:7350';
+  },
+  setHost(h){
+    h = String(h || '').trim().replace(/^\w+:\/\//, '').replace(/\/.*$/, '');
+    if(h && !/:\d+$/.test(h)) h += ':7350';
+    try{ localStorage.setItem('scenepro-synthe-regie', h || 'localhost:7350'); }catch(e){}
+  },
+  isLocalHost(h){ return /^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/.test(h || this.host()); },
+};
+const Net = {
+  ws: null, ok: false, regies: 0, retryT: null,
+  connect(){
+    clearTimeout(this.retryT);
+    if(this.ws){ const old = this.ws; this.ws = null; old.onclose = null; try{ old.close(); }catch(e){} }
+    const host = Mode.host();
+    setConn(false, 'CONNEXION…');
+    let ws;
+    try{ ws = new WebSocket(`ws://${host}/gfx?role=synthe&k=${encodeURIComponent(Access.code())}`); }
+    catch(e){ setConn(false); this.retryT = setTimeout(() => this.connect(), 3000); return; }
+    this.ws = ws;
+    ws.onopen = () => { this.ok = true; this.send(true); };
+    ws.onmessage = e => {
+      let m; try{ m = JSON.parse(e.data); }catch(err){ return; }
+      if(m.type === 'hello' || m.type === 'peers'){
+        // code accepté par la régie : on le garde pour les prochaines fois
+        if(m.type === 'hello'){ if(Access.pending){ Access.save(Access.pending); Access.pending = ''; } Access.tried = 0; }
+        this.regies = m.regies || 0; this.token = m.token || this.token; showUrls(); setConn(true);
+      }
+      else if(m.type === 'cmd') runCmd(m.cmd, m.arg);
+    };
+    ws.onclose = e => {
+      if(this.ws !== ws) return;
+      this.ok = false;
+      if(e.code === 4401){
+        // régie sur ce PC : on essaie les codes des régies installées ici avant de demander
+        if(Access.nextLocal()){ this.retryT = setTimeout(() => this.connect(), 200); return; }
+        setConn(false, 'CODE D\'ACCÈS REQUIS'); Access.ask(); return;
+      }
+      if(e.code === 4403){ setConn(false, 'ACCÈS BLOQUÉ'); toast('Accès refusé : trop de codes faux (réessai dans 2 min) ou accès réseau désactivé sur la régie.'); this.retryT = setTimeout(() => this.connect(), 30000); return; }
+      // régie éteinte ou injoignable : on continue à préparer, et on réessaie tout seul
+      setConn(false); this.retryT = setTimeout(() => this.connect(), 3000);
+    };
+  },
+  payload(){ return {theme: S.theme, items: S.items.map(i => Object.assign({}, i))}; },
+  t: null,
+  send(now){
+    clearTimeout(this.t);
+    const go = () => { if(this.ws && this.ws.readyState === 1) this.ws.send(JSON.stringify({type: 'gfx', state: this.payload()})); };
+    if(now) go(); else this.t = setTimeout(go, 120);
+  },
+};
+/* code d'accès (6 chiffres, affiché dans la régie : Sorties › Accès réseau). Pas demandé quand la page est servie
+   par la régie sur le même ordinateur ; en mode autonome sur le PC de la régie, il est trouvé tout seul. */
+const Access = {
+  tried: 0, pending: '',
+  key(){ return 'scenepro-code:' + Mode.host(); },
+  stored(){ try{ return localStorage.getItem(this.key()) || ''; }catch(e){ return ''; } },
+  save(c){ try{ localStorage.setItem(this.key(), c); }catch(e){} },
+  code(){
+    const q = new URLSearchParams(location.search).get('code');
+    if(q){ this.save(q); history.replaceState(null, '', location.pathname); }
+    if(this.pending) return this.pending;
+    return this.stored() || (Mode.isLocalHost() && Mode.localCodes[0]) || '';
+  },
+  nextLocal(){
+    if(!Mode.isLocalHost() || this.tried >= Mode.localCodes.length) return false;
+    this.pending = Mode.localCodes[this.tried++]; return true;
+  },
+  ask(){ this.pending = ''; this.tried = 0; connDialog(true); },
+};
+/* réglage de la connexion : adresse de la régie + code */
+function connDialog(needCode){
+  const fixed = Mode.servedByRegie(), host = Mode.host();
+  modal(`<h3>Connexion à la régie</h3>
+    <p class="hint" style="margin-bottom:12px">${fixed ? `Ce poste est ouvert depuis la régie <b>${esc(host)}</b>.`
+      : `Le poste Synthé fonctionne <b>même si la régie est éteinte</b> : préparez vos synthés, il se connectera tout seul dès que la régie sera allumée.`}
+      Le code d'accès s'affiche dans ScènePro : menu <b>Sorties › Accès réseau (autres ordinateurs)</b>.</p>
+    ${fixed ? '' : `<div class="field"><label>Adresse de la régie</label><div style="display:flex;gap:6px">
+      <input class="txt" id="cHost" value="${esc(host.replace(/:7350$/, ''))}" placeholder="192.168.1.20">
+      <button class="btn" id="cThis" title="La régie tourne sur ce même ordinateur">Ce PC</button></div>
+      <div class="hint">Adresse IP de l'ordinateur de la régie (port 7350 par défaut).</div></div>`}
+    <div class="field"><label>Code d'accès</label>
+      <input class="txt" id="cCode" inputmode="numeric" maxlength="6" placeholder="000000" style="font:700 26px var(--mono);height:50px;text-align:center;letter-spacing:8px" value="${esc(Access.stored())}">
+      <div class="hint" id="cErr" style="color:#ff9d9d">${needCode ? (Access.stored() ? 'La régie a refusé ce code.' : 'La régie demande le code d\'accès.') : ''}</div></div>
+    <div class="two"><button class="btn block" id="cOff">${Net.ok ? 'Fermer' : 'Rester hors ligne'}</button><button class="btn primary block" id="cGo">Se connecter</button></div>`);
+  const go = () => {
+    const c = $('#cCode').value.replace(/\D/g, '');
+    if(c && c.length !== 6){ $('#cErr').textContent = 'Le code fait 6 chiffres.'; return; }
+    if(!fixed) Mode.setHost($('#cHost').value);
+    if(c) Access.save(c);
+    Access.pending = ''; Access.tried = 0;
+    closeModal(); showUrls(); Net.connect();
+  };
+  $('#cGo').onclick = go; $('#cCode').onkeydown = e => { if(e.key === 'Enter') go(); };
+  $('#cOff').onclick = closeModal;
+  if($('#cThis')) $('#cThis').onclick = () => { $('#cHost').value = 'localhost'; };
+  (needCode ? $('#cCode') : ($('#cHost') || $('#cCode'))).focus();
+}
+$('#conn').onclick = () => connDialog(false);
+function setConn(ok, txt){
+  const c = $('#conn'), host = Mode.host().replace(/:7350$/, '');
+  c.className = 'pill ' + (ok ? 'ok' : 'bad');
+  $('#connLbl').textContent = txt || (ok ? (Net.regies ? 'RÉGIE CONNECTÉE · ' + host : 'SERVEUR OK — RÉGIE FERMÉE')
+    : 'HORS LIGNE — PRÉPARATION · ' + host);
+  if(ok && !Net.regies){ c.className = 'pill'; c.querySelector('.led').style.background = 'var(--amber)'; } else c.querySelector('.led').style.background = '';
+}
+function showUrls(){
+  const base = 'http://' + Mode.host(), remote = !Mode.isLocalHost();
+  $('#srvUrl').textContent = base;
+  $('#ovUrl').textContent = base + '/overlay' + (remote || !Mode.servedByRegie() ? '?code=' + (Access.code() || 'XXXXXX') : '');
+  $('#apiUrl').textContent = base + '/api/gfx/take/1?k=' + (Net.token || '…');
+}
+
+/* ---------------- antenne ---------------- */
+const timers = new Map();
+function setOn(it, on){
+  if(!it) return;
+  if(on && it.type === 'lower' && S.exclusive) S.items.forEach(o => { if(o !== it && o.type === 'lower' && o.on) setOn(o, false); });
+  if(on && it.type === 'fullscreen') S.items.forEach(o => { if(o !== it && o.type === 'fullscreen' && o.on) setOn(o, false); });
+  it.on = on;
+  clearTimeout(timers.get(it.id)); timers.delete(it.id);
+  if(on && +it.autoOff > 0){ it.onAt = Date.now(); timers.set(it.id, setTimeout(() => { setOn(it, false); push(); }, it.autoOff * 1000)); }
+  if(on && it.type === 'lower') S.lastLower = it.id;
+}
+function push(){ pgmScene.update(Net.payload()); renderList(); renderNames(); Net.send(true); save(); }
+function toggle(it){ if(!it) return; setOn(it, !it.on); push(); }
+function clearAll(){ S.items.forEach(i => { if(i.on) setOn(i, false); }); push(); }
+function nextLower(){
+  const lows = S.items.filter(i => i.type === 'lower'); if(!lows.length) return;
+  const cur = lows.findIndex(i => i.id === S.lastLower);
+  const n = lows[(cur + 1) % lows.length];
+  setOn(n, true); S.sel = n.id; push(); renderEditor();
+}
+function runCmd(cmd, arg){
+  const it = arg ? S.items[arg - 1] : sel();
+  if(cmd === 'take') toggle(it);
+  else if(cmd === 'on'){ if(it && !it.on){ setOn(it, true); push(); } }
+  else if(cmd === 'off'){ if(it && it.on){ setOn(it, false); push(); } }
+  else if(cmd === 'next') nextLower();
+  else if(cmd === 'clear') clearAll();
+  else if(cmd === 'select' && it){ S.sel = it.id; renderAll(); }
+}
+
+/* ---------------- aperçus ---------------- */
+const pvwScene = new GfxRender.Scene(), pgmScene = new GfxRender.Scene();
+const pvwCv = $('#pvwCv'), pgmCv = $('#pgmCv');
+function fit(cv){ const w = Math.round(cv.clientWidth * devicePixelRatio), h = Math.round(cv.clientHeight * devicePixelRatio); if(cv.width !== w || cv.height !== h){ cv.width = w; cv.height = h; } }
+let pvwSig = '';
+function frame(){
+  const it = sel();
+  const sig = it ? JSON.stringify(it) + JSON.stringify(S.theme) : '';
+  if(sig !== pvwSig){ pvwSig = sig; pvwScene.update({theme: S.theme, items: it ? [Object.assign({}, it, {on: true})] : []}); }
+  [pvwCv, pgmCv].forEach(fit);
+  let g = pvwCv.getContext('2d'); g.clearRect(0, 0, pvwCv.width, pvwCv.height); pvwScene.draw(g, pvwCv.width, pvwCv.height);
+  g = pgmCv.getContext('2d'); g.clearRect(0, 0, pgmCv.width, pgmCv.height); pgmScene.draw(g, pgmCv.width, pgmCv.height);
+  // barres de temps des retraits automatiques
+  document.querySelectorAll('.row[data-id]').forEach(r => {
+    const i = S.items.find(x => x.id === r.dataset.id), b = r.querySelector('.bar'); if(!b) return;
+    b.style.width = (i && i.on && +i.autoOff > 0) ? Math.max(0, 100 - (Date.now() - i.onAt) / (i.autoOff * 10)) + '%' : '0';
+  });
+  requestAnimationFrame(frame);
+}
+
+/* ---------------- interface ---------------- */
+function renderAll(){ renderList(); renderEditor(); renderNames(); renderTargets(); }
+function renderTargets(){
+  const it = sel();
+  $('#tgts').innerHTML = OUTS.map(([k, l]) => `<button class="tgl ${it && it.targets[k] ? 'on' : ''}" data-tg="${k}" ${it ? '' : 'disabled'} title="Envoyer l'élément sélectionné sur ${l}">${l}</button>`).join('');
+  $('#pvwScr').classList.toggle('dark', !!S.dark); $('#pgmScr').classList.toggle('dark', !!S.dark); }
+function renderNames(){
+  const it = sel(); $('#pvwName').textContent = it ? label(it) : '—';
+  const on = S.items.filter(i => i.on); $('#pgmName').textContent = on.length ? on.map(label).join(' · ') : 'rien à l\'antenne';
+}
+function renderList(){
+  const L = $('#list');
+  if(!S.items.length){ L.innerHTML = '<div class="empty">Conducteur vide.<br>Ajoutez un synthé, un logo, un bandeau…</div>'; return; }
+  L.innerHTML = S.items.map((it, n) => `<div class="row ${it.id === S.sel ? 'sel' : ''} ${it.on ? 'on' : ''}" data-id="${it.id}" draggable="true">
+    <span class="num">${n + 1}</span><span class="tag">${TYPES[it.type].tag}</span>
+    <div class="nm"><b>${esc(label(it)) || '<i style="color:var(--dim)">sans titre</i>'}</b><small>${esc(sub(it))}</small>
+      <span class="tg">${OUTS.filter(([k]) => it.targets[k]).map(([k, l]) => `<i>${l.replace('PGM ', 'P')}</i>`).join('') || '<i class="none">AUCUNE SORTIE</i>'}</span></div>
+    <button class="air" data-air="${it.id}">${it.on ? 'ANTENNE' : 'ENVOYER'}</button><span class="bar"></span></div>`).join('');
+}
+$('#list').addEventListener('click', e => {
+  const r = e.target.closest('.row'); if(!r) return;
+  const it = S.items.find(i => i.id === r.dataset.id);
+  if(e.target.closest('[data-air]')){ toggle(it); return; }
+  S.sel = it.id; renderList(); renderEditor(); renderNames(); save();
+});
+$('#list').addEventListener('dblclick', e => { const r = e.target.closest('.row'); if(r && !e.target.closest('[data-air]')) toggle(S.items.find(i => i.id === r.dataset.id)); });
+// réordonner par glisser-déposer
+let dragId = null;
+$('#list').addEventListener('dragstart', e => { const r = e.target.closest('.row'); dragId = r && r.dataset.id; });
+$('#list').addEventListener('dragover', e => e.preventDefault());
+$('#list').addEventListener('drop', e => {
+  e.preventDefault(); const r = e.target.closest('.row'); if(!r || !dragId || r.dataset.id === dragId) return;
+  const a = S.items.findIndex(i => i.id === dragId), it = S.items.splice(a, 1)[0];
+  S.items.splice(S.items.findIndex(i => i.id === r.dataset.id) + (a <= S.items.findIndex(i => i.id === r.dataset.id) ? 1 : 0), 0, it);
+  renderList(); push();
+});
+
+const segH = (key, opts, v) => `<div class="seg" data-seg="${key}">${opts.map(([val, l]) => `<button data-v="${esc(val)}" class="${String(v) === String(val) ? 'on' : ''}">${l}</button>`).join('')}</div>`;
+const CORNERS = [['tl', '↖ Haut G'], ['tr', '↗ Haut D'], ['bl', '↙ Bas G'], ['br', '↘ Bas D']];
+function renderEditor(){
+  const it = sel(), E = $('#ed');
+  if(!it){ $('#edHead').textContent = 'Réglages'; E.innerHTML = '<div class="empty">Sélectionnez un élément du conducteur.</div>'; return; }
+  $('#edHead').textContent = 'Réglages — ' + TYPES[it.type].tag;
+  let h = `<div class="field"><label>Sorties (où cet élément s'incruste)</label><div class="seg" id="edTg">${OUTS.map(([k, l]) => `<button data-tg="${k}" class="${it.targets[k] ? 'on' : ''}">${l}</button>`).join('')}</div>
+    <div class="hint">Un programme en mode RETOUR dans la régie reçoit les éléments du PGM 1.</div></div>`;
+  if(it.type === 'lower'){
+    h += `<div class="field"><label>Nom</label><input class="txt" data-k="name" value="${esc(it.name)}"></div>
+      <div class="field"><label>Fonction</label><input class="txt" data-k="role" value="${esc(it.role)}"></div>
+      <div class="field"><label>Style</label>${segH('style', [['classique', 'Classique'], ['moderne', 'Moderne'], ['bandeau', 'Bandeau']], it.style)}</div>
+      <div class="field"><label>Position</label>${segH('pos', [['left', 'Gauche'], ['center', 'Centre'], ['right', 'Droite']], it.pos)}</div>
+      <div class="field"><label>Retrait automatique (secondes, 0 = jamais)</label><input class="txt" type="number" min="0" max="600" data-k="autoOff" data-num value="${it.autoOff || 0}"></div>`;
+  } else if(it.type === 'logo'){
+    h += `<div class="field"><label>Nom dans le conducteur</label><input class="txt" data-k="label" value="${esc(it.label || '')}"></div>
+      <div class="field"><label>Image (PNG transparent conseillé)</label><div class="logoPrev">${it.image ? `<img src="${it.image}">` : '<span style="color:var(--dim)">aucune image</span>'}</div>
+      <button class="btn block" data-pick="image">Choisir une image…</button></div>
+      <div class="field"><label>Coin</label>${segH('corner', CORNERS, it.corner)}</div>
+      <div class="field"><label>Taille : <span id="vSize">${Math.round(it.size * 100)}</span> % de la largeur</label><input type="range" min="3" max="40" data-k="size" data-pct value="${Math.round(it.size * 100)}"></div>
+      <div class="field"><label>Opacité : <span id="vOpacity">${Math.round(it.opacity * 100)}</span> %</label><input type="range" min="10" max="100" data-k="opacity" data-pct value="${Math.round(it.opacity * 100)}"></div>`;
+  } else if(it.type === 'ticker'){
+    h += `<div class="field"><label>Étiquette</label><input class="txt" data-k="label" value="${esc(it.label)}"></div>
+      <div class="field"><label>Texte défilant (une info par ligne)</label><textarea class="txt" data-k="text" rows="4">${esc(it.text)}</textarea></div>
+      <div class="field"><label>Vitesse : <span id="vSpeed">${it.speed}</span> px/s</label><input type="range" min="40" max="400" data-k="speed" data-num value="${it.speed}"></div>`;
+  } else if(it.type === 'fullscreen'){
+    h += `<div class="field"><label>Titre (plusieurs lignes possibles)</label><textarea class="txt" data-k="title" rows="2">${esc(it.title)}</textarea></div>
+      <div class="field"><label>Sous-titre</label><input class="txt" data-k="subtitle" value="${esc(it.subtitle)}"></div>
+      <div class="field"><label>Opacité du fond : <span id="vOpacity">${Math.round(it.opacity * 100)}</span> %</label><input type="range" min="0" max="100" data-k="opacity" data-pct value="${Math.round(it.opacity * 100)}"></div>
+      <div class="field"><label>Image de fond (facultatif)</label><div class="two"><button class="btn block" data-pick="image">Choisir…</button><button class="btn block" data-noimg>Retirer</button></div></div>`;
+  } else if(it.type === 'badge'){
+    h += `<div class="field"><label>Texte</label><input class="txt" data-k="text" value="${esc(it.text)}"></div>
+      <div class="field"><label>Coin</label>${segH('corner', CORNERS, it.corner)}</div>
+      <div class="field"><label>Point clignotant</label>${segH('dot', [['true', 'Oui'], ['false', 'Non']], it.dot)}</div>
+      <div class="field"><label>Couleur</label><input type="color" data-k="color" value="${it.color || S.theme.accent}"> <span class="hint">par défaut : couleur d'accent</span></div>`;
+  } else if(it.type === 'clock'){
+    h += `<div class="field"><label>Mode</label>${segH('mode', [['heure', 'Heure'], ['compte', 'Compte à rebours']], it.mode)}</div>
+      ${it.mode === 'compte' ? `<div class="field"><label>Jusqu'à (HH:MM)</label><input class="txt" data-k="target" value="${esc(it.target)}" placeholder="14:00"></div>`
+        : `<div class="field"><label>Secondes</label>${segH('seconds', [['false', 'Non'], ['true', 'Oui']], it.seconds)}</div>`}
+      <div class="field"><label>Légende (facultatif)</label><input class="txt" data-k="label" value="${esc(it.label)}" placeholder="ex. REPRISE DANS"></div>
+      <div class="field"><label>Coin</label>${segH('corner', CORNERS, it.corner)}</div>`;
+  }
+  h += `<div class="sep"></div><div class="two"><button class="btn block" id="eDup">Dupliquer</button><button class="btn block danger" id="eDel">Supprimer</button></div>`;
+  E.innerHTML = h;
+  E.querySelectorAll('[data-k]').forEach(inp => inp.oninput = () => {
+    let v = inp.value;
+    if(inp.hasAttribute('data-pct')) v = +v / 100; else if(inp.hasAttribute('data-num')) v = +v || 0;
+    it[inp.dataset.k] = v;
+    const span = $('#v' + inp.dataset.k[0].toUpperCase() + inp.dataset.k.slice(1)); if(span) span.textContent = inp.value;
+    edited(it);
+  });
+  E.querySelectorAll('[data-seg]').forEach(sg => sg.onclick = e => {
+    const b = e.target.closest('button'); if(!b) return;
+    let v = b.dataset.v; if(v === 'true') v = true; else if(v === 'false') v = false;
+    it[sg.dataset.seg] = v; edited(it); renderEditor();
+  });
+  $('#edTg').onclick = e => { const b = e.target.closest('[data-tg]'); if(b) toggleTarget(it, b.dataset.tg); };
+  E.querySelectorAll('[data-pick]').forEach(b => b.onclick = () => pickImage(it));
+  const ni = E.querySelector('[data-noimg]'); if(ni) ni.onclick = () => { it.image = ''; edited(it); };
+  $('#eDel').onclick = () => { if(it.on && !confirm('Cet élément est à l\'antenne. Le retirer et le supprimer ?')) return;
+    const i = S.items.indexOf(it); S.items.splice(i, 1); setOn(it, false); const n = S.items[i] || S.items[i - 1]; S.sel = n ? n.id : null; push(); renderEditor(); };
+  $('#eDup').onclick = () => { const c = Object.assign({}, it, {id: uid(), on: false, targets: fixTargets(it.targets)}); S.items.splice(S.items.indexOf(it) + 1, 0, c); S.sel = c.id; push(); renderEditor(); };
+}
+function edited(it){ renderList(); renderNames(); if(it.on) { pgmScene.update(Net.payload()); Net.send(); } save(); }
+function add(type){
+  const it = Object.assign({id: uid(), type, on: false}, TYPES[type].def(), {targets: fixTargets(sel() ? sel().targets : DEF_TARGETS)});
+  const i = S.items.findIndex(x => x.id === S.sel);
+  S.items.splice(i >= 0 ? i + 1 : S.items.length, 0, it); S.sel = it.id;
+  renderAll(); save(); Net.send();
+  if(type === 'logo') pickImage(it);
+}
+document.querySelectorAll('[data-add]').forEach(b => b.onclick = () => add(b.dataset.add));
+
+/* image : redimensionnée (1280 px max) pour rester légère sur le réseau local */
+let pickFor = null;
+function pickImage(it){ pickFor = it; $('#fileImg').click(); }
+$('#fileImg').onchange = e => {
+  const f = e.target.files[0]; e.target.value = ''; if(!f || !pickFor) return;
+  const it = pickFor, url = URL.createObjectURL(f), im = new Image();
+  im.onload = () => {
+    const max = it.type === 'logo' ? 800 : 1920, k = Math.min(1, max / Math.max(im.naturalWidth, im.naturalHeight));
+    const c = document.createElement('canvas'); c.width = Math.round(im.naturalWidth * k); c.height = Math.round(im.naturalHeight * k);
+    c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
+    it.image = c.toDataURL(it.type === 'logo' ? 'image/webp' : 'image/jpeg', 0.9);
+    if(it.type === 'logo' && (!it.label || it.label === 'Logo')) it.label = f.name.replace(/\.[^.]+$/, '');
+    URL.revokeObjectURL(url); edited(it); renderEditor();
+  };
+  im.onerror = () => toast('Image illisible.');
+  im.src = url;
+};
+
+/* ---------------- boîtes de dialogue ---------------- */
+function modal(html){ $('#dlg').innerHTML = html; $('#modal').classList.add('on'); }
+function closeModal(){ $('#modal').classList.remove('on'); }
+$('#modal').addEventListener('mousedown', e => { if(e.target.id === 'modal') closeModal(); });
+let toastT;
+function toast(m){ const t = $('#toast'); t.textContent = m; t.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('on'), 3500); }
+
+$('#btnBulk').onclick = () => {
+  modal(`<h3>Importer des intervenants</h3>
+    <p class="hint" style="margin-bottom:10px">Un intervenant par ligne : <b>Nom ; Fonction</b> (le séparateur peut être « ; », une tabulation ou « - »). Vous pouvez coller directement deux colonnes d'Excel.</p>
+    <textarea class="txt" id="bulkTxt" rows="10" placeholder="Marie Dupont ; Directrice générale&#10;Jean Martin ; Responsable technique"></textarea>
+    <div class="field" style="margin-top:10px"><label>Retrait automatique (s)</label><input class="txt" id="bulkAuto" type="number" value="8"></div>
+    <div class="two"><button class="btn block" onclick="closeModal()">Annuler</button><button class="btn primary block" id="bulkOk">Ajouter au conducteur</button></div>`);
+  $('#bulkOk').onclick = () => {
+    const lines = $('#bulkTxt').value.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    const auto = +$('#bulkAuto').value || 0;
+    lines.forEach(l => { const [n, ...r] = l.split(/\s*(?:;|\t|\s-\s|\s–\s)\s*/);
+      S.items.push(Object.assign({id: uid(), type: 'lower', on: false}, TYPES.lower.def(), {name: n, role: r.join(' '), autoOff: auto, targets: fixTargets(sel() ? sel().targets : DEF_TARGETS)})); });
+    closeModal(); renderAll(); save(); Net.send(); toast(lines.length + ' synthé(s) ajouté(s).');
+  };
+};
+$('#btnTheme').onclick = () => {
+  const t = S.theme;
+  const col = (k, l) => `<label><input type="color" data-t="${k}" value="${t[k]}">${l}</label>`;
+  modal(`<h3>Charte graphique</h3>
+    <div class="field"><label>Couleurs</label><div class="colors">${col('primary', 'Fond des cartouches')}${col('accent', 'Accent (barres, étiquettes)')}${col('text', 'Texte principal')}${col('panel2', 'Fond de la fonction')}${col('text2', 'Texte de la fonction')}</div></div>
+    <div class="field"><label>Police</label><select class="txt" data-t="font">${['Segoe UI', 'Arial', 'Calibri', 'Bahnschrift', 'Verdana', 'Georgia', 'Trebuchet MS', 'Impact', 'Montserrat', 'Roboto'].map(f => `<option ${f === t.font ? 'selected' : ''}>${f}</option>`).join('')}</select>
+    <div class="hint">La police doit être installée sur l'ordinateur de la régie.</div></div>
+    <div class="field"><label>Synthés</label>${segH('exclusive', [['true', 'Un seul à la fois (recommandé)'], ['false', 'Plusieurs possibles']], S.exclusive)}</div>
+    <div class="two"><button class="btn block" id="thReset">Couleurs par défaut</button><button class="btn primary block" onclick="closeModal()">Fermer</button></div>`);
+  $('#dlg').querySelectorAll('[data-t]').forEach(i => i.oninput = () => { S.theme[i.dataset.t] = i.value; pgmScene.update(Net.payload()); Net.send(); save(); });
+  $('#dlg').querySelector('[data-seg]').onclick = e => { const b = e.target.closest('button'); if(!b) return; S.exclusive = b.dataset.v === 'true'; save(); $('#btnTheme').click(); };
+  $('#thReset').onclick = () => { S.theme = Object.assign({}, GfxRender.DEFAULT_THEME); pgmScene.update(Net.payload()); Net.send(); save(); $('#btnTheme').click(); };
+};
+$('#btnMore').onclick = () => {
+  modal(`<h3>Fichier</h3>
+    <p class="hint" style="margin-bottom:12px">Le conducteur est enregistré automatiquement sur cet ordinateur. Exportez-le pour le garder avec votre show ou le transférer sur une autre régie.</p>
+    <div class="two" style="margin-bottom:10px"><button class="btn block" id="fExp">Exporter le conducteur (.json)</button><button class="btn block" id="fImp">Importer un conducteur…</button></div>
+    <button class="btn block danger" id="fNew">Nouveau conducteur vide</button>`);
+  $('#fExp').onclick = () => {
+    const b = new Blob([JSON.stringify(Object.assign({}, S, {items: S.items.map(i => Object.assign({}, i, {on: false}))}), null, 1)], {type: 'application/json'});
+    const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'conducteur-synthe.json'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  };
+  $('#fImp').onclick = () => $('#fileJson').click();
+  $('#fNew').onclick = () => { if(!confirm('Vider le conducteur ?')) return; clearAll(); S.items = []; S.sel = null; closeModal(); renderAll(); save(); Net.send(); };
+};
+$('#fileJson').onchange = async e => {
+  const f = e.target.files[0]; e.target.value = ''; if(!f) return;
+  try{ const d = JSON.parse(await f.text()); if(!Array.isArray(d.items)) throw new Error('format');
+    clearAll(); S.items = d.items.map(i => Object.assign({}, i, {on: false, id: i.id || uid(), targets: fixTargets(i.targets || DEF_TARGETS)})).filter(i => TYPES[i.type]);
+    if(d.theme) S.theme = Object.assign({}, GfxRender.DEFAULT_THEME, d.theme);
+    S.sel = S.items[0] ? S.items[0].id : null; closeModal(); renderAll(); save(); push(); toast('Conducteur importé.');
+  }catch(err){ toast('Fichier invalide.'); }
+};
+
+function toggleTarget(it, k){ if(!it) return; it.targets[k] = !it.targets[k]; renderAll(); pgmScene.update(Net.payload()); Net.send(true); save(); }
+$('#tgts').onclick = e => { const b = e.target.closest('[data-tg]'); if(b) toggleTarget(sel(), b.dataset.tg); };
+$('#btnClear').onclick = clearAll;
+$('#btnTake').onclick = () => toggle(sel());
+$('#btnNextLower').onclick = nextLower;
+$('#btnBg').onclick = () => { S.dark = !S.dark; renderTargets(); save(); };
+
+document.addEventListener('keydown', e => {
+  if(e.target.closest('input,textarea,select')){ if(e.key === 'Escape') e.target.blur(); return; }
+  if($('#modal').classList.contains('on')){ if(e.key === 'Escape') closeModal(); return; }
+  const i = S.items.findIndex(x => x.id === S.sel);
+  if(e.key === 'ArrowDown' || e.key === 'ArrowUp'){ e.preventDefault(); const n = S.items[Math.max(0, Math.min(S.items.length - 1, i + (e.key === 'ArrowDown' ? 1 : -1)))]; if(n){ S.sel = n.id; renderAll(); } }
+  else if(e.key === 'Enter'){ e.preventDefault(); toggle(sel()); }
+  else if(e.key === 'ArrowRight'){ e.preventDefault(); nextLower(); }
+  else if(e.key === 'Escape'){ clearAll(); }
+  else if(/^[1-9]$/.test(e.key)){ toggle(S.items[+e.key - 1]); }
+});
+
+/* démarrage : en mode autonome (ScènePro.exe --synthe / Lancer Synthe.bat) le conducteur vient du fichier du poste */
+(async function boot(){
+  try{
+    const r = await fetch('api/local-codes', {cache: 'no-store'});
+    if(r.ok){ const j = await r.json(); if(j && j.autonome){ Mode.autonome = true; Mode.localCodes = j.codes || []; } }
+  }catch(e){}
+  if(Mode.autonome){
+    try{ const d = await (await fetch('api/conducteur', {cache: 'no-store'})).json(); if(d && Array.isArray(d.items)) S = normalize(d); }catch(e){}
+  }
+  if(!S.sel && S.items[0]) S.sel = S.items[0].id;
+  showUrls(); renderAll(); pgmScene.update(Net.payload());
+  requestAnimationFrame(frame);
+  Net.connect();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,533 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ScènePro — Programmes</title>
+<style>
+:root{
+  --bg:#0a0c0f;--panel:#12151a;--panel2:#171b21;--panel3:#1f242c;--line:#262c35;--line2:#343c48;
+  --text:#e7eaee;--muted:#8b93a0;--dim:#5b6370;
+  --green:#1fd16b;--green-bg:rgba(31,209,107,.12);--red:#ff3b3b;--red-bg:rgba(255,59,59,.12);
+  --amber:#ffb020;--accent:#3d8bff;--violet:#a66bff;
+  --mono:"Cascadia Mono","Consolas",ui-monospace,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:13px/1.35 "Segoe UI Variable Text","Segoe UI",system-ui,sans-serif;overflow:hidden;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;cursor:pointer}
+button:disabled{opacity:.4;cursor:default}
+input,select{font:inherit;color:inherit}
+.app{display:grid;grid-template-rows:46px 1fr;height:100vh}
+header{display:flex;align-items:center;gap:10px;padding:0 12px;background:#0d1014;border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:9px;font-weight:700;font-size:15px}
+.brand .mark{width:22px;height:22px;border-radius:6px;background:linear-gradient(135deg,var(--violet),#5a2bb0);display:grid;place-items:center}
+.brand .mark i{width:0;height:0;border-left:8px solid #fff;border-top:5px solid transparent;border-bottom:5px solid transparent;margin-left:2px}
+.spacer{flex:1}
+.pill{display:flex;align-items:center;gap:7px;height:28px;padding:0 10px;border-radius:6px;background:var(--panel2);border:1px solid var(--line);color:var(--muted);font-size:11px;font-weight:700;letter-spacing:1px;white-space:nowrap}
+.pill .led{width:8px;height:8px;border-radius:50%;background:var(--dim)}
+.pill.ok{color:#fff;border-color:rgba(31,209,107,.5);background:var(--green-bg)}.pill.ok .led{background:var(--green);box-shadow:0 0 8px var(--green)}
+.pill.wait .led{background:var(--amber)}
+.pill.bad{color:#ffb3b3;border-color:rgba(255,59,59,.5);background:var(--red-bg)}.pill.bad .led{background:var(--red)}
+.clock{font-family:var(--mono);font-size:16px;color:#cfd5dc}
+.btn{height:30px;padding:0 12px;border-radius:6px;border:1px solid var(--line2);background:var(--panel3);display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.btn:hover:not(:disabled){border-color:#4a5462;background:#262c35}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.danger{color:#ff9d9d}
+.btn.sm{height:24px;padding:0 8px;font-size:12px}
+.btn.block{width:100%;justify-content:center}
+main{display:grid;grid-template-columns:360px 1fr 330px;min-height:0}
+.col{display:flex;flex-direction:column;min-height:0;border-right:1px solid var(--line)}
+.col:last-child{border-right:0}
+.colhead{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--line);font-size:11px;font-weight:700;letter-spacing:1.3px;color:var(--muted);text-transform:uppercase}
+.scroll{flex:1;overflow:auto;min-height:0}
+.drop{margin:10px 12px;padding:14px;border:1px dashed var(--line2);border-radius:8px;text-align:center;color:var(--muted);cursor:pointer;transition:.15s}
+.drop b{color:var(--text)}
+.drop:hover,.drop.over{border-color:var(--violet);background:rgba(166,107,255,.08);color:#ddd}
+.row{display:flex;align-items:center;gap:10px;padding:8px 10px 8px 12px;border-bottom:1px solid var(--line);cursor:pointer;position:relative}
+.row:hover{background:var(--panel)}
+.row.sel{background:var(--panel2);box-shadow:inset 3px 0 0 var(--green)}
+.row.on{box-shadow:inset 3px 0 0 var(--red)}
+.row.sel.on{box-shadow:inset 3px 0 0 var(--red),inset 6px 0 0 var(--green)}
+.row.drag{opacity:.4}
+.row.dropAbove{box-shadow:inset 0 2px 0 var(--violet)}
+.row .num{font-family:var(--mono);color:var(--dim);width:18px;text-align:right;font-size:12px;flex:none}
+.row .th{width:84px;height:47px;border-radius:4px;background:#000 center/cover no-repeat;flex:none;border:1px solid var(--line2);position:relative}
+.row .th span{position:absolute;right:2px;bottom:2px;font:600 10px var(--mono);background:rgba(0,0,0,.75);padding:0 4px;border-radius:3px}
+.row .nm{flex:1;min-width:0}
+.row .nm b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}
+.row .nm small{display:block;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .air{font-size:9px;font-weight:800;letter-spacing:1px;padding:2px 6px;border-radius:4px;background:var(--red);color:#fff;flex:none}
+.row .bar{position:absolute;left:0;bottom:0;height:2px;background:var(--red)}
+.row.up{cursor:default}
+.row.up .bar{background:var(--violet)}
+.empty{padding:30px 16px;color:var(--dim);text-align:center;line-height:1.6}
+.center{display:flex;flex-direction:column;gap:12px;padding:12px;min-height:0;overflow:auto}
+.monhead{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:800;letter-spacing:1.3px;margin-bottom:6px}
+.monhead .t{padding:3px 8px;border-radius:4px;background:var(--green-bg);color:var(--green)}
+.monhead small{color:var(--muted);font-weight:500;letter-spacing:0;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
+.screen{position:relative;aspect-ratio:16/9;max-height:46vh;margin:0 auto;width:100%;border-radius:6px;overflow:hidden;border:2px solid rgba(31,209,107,.6);background:#000}
+.screen video{width:100%;height:100%;object-fit:contain;display:block}
+.screen .none{position:absolute;inset:0;display:grid;place-items:center;color:var(--dim);font-weight:700;letter-spacing:2px;background:repeating-linear-gradient(45deg,#0c0d0f 0 12px,#101215 12px 24px)}
+.scrub{display:flex;align-items:center;gap:8px;margin-top:6px}
+.scrub input{flex:1}
+.scrub .tc{font:600 12px var(--mono);color:#cfd5dc;min-width:110px;text-align:center}
+.opts{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.opts .lbl{font-size:11px;font-weight:700;letter-spacing:1px;color:var(--muted)}
+.seg{display:flex;gap:4px}
+.seg button{height:30px;padding:0 12px;border-radius:6px;border:1px solid var(--line2);background:var(--panel2);color:var(--muted);font-size:12px;font-weight:700;white-space:nowrap}
+.seg button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.seg.bus button.on{background:var(--red);border-color:var(--red)}
+.chk{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:12px;cursor:pointer}
+.take{display:grid;grid-template-columns:2fr 1.4fr 1fr 1fr;gap:10px}
+.take button{height:64px;border-radius:8px;border:1px solid var(--line2);background:var(--panel2);font-weight:800;letter-spacing:1.5px;font-size:15px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+.take button small{font-weight:500;letter-spacing:0;font-size:11px;color:var(--muted)}
+.take .go{background:var(--red);border-color:var(--red);color:#fff}.take .go small{color:#ffd6d6}
+.take .go:hover:not(:disabled){filter:brightness(1.1)}
+.take .back{border-color:rgba(31,209,107,.5);color:var(--green)}
+.buses{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.bus{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 12px;cursor:pointer;position:relative;overflow:hidden;min-width:0}
+.bus.tgt{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.bus.prog{background:linear-gradient(180deg,rgba(255,59,59,.16),var(--panel) 70%);border-color:rgba(255,59,59,.6)}
+.bus .bh{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:800;letter-spacing:1.3px;color:var(--muted)}
+.bus .bh i{font-style:normal;font-size:9px;padding:1px 5px;border-radius:3px;background:var(--panel3);color:var(--muted);letter-spacing:.5px}
+.bus .bh i.web{background:rgba(255,59,59,.15);color:#ff9d9d}
+.bus .bn{margin:6px 0 2px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-height:18px}
+.bus .rem{font:700 30px/1.1 var(--mono);color:#fff}
+.bus .rem.warn{color:var(--amber)}.bus .rem.crit{color:var(--red)}
+.bus .sub{font-size:11.5px;color:var(--muted);min-height:16px}
+.bus .pb{position:absolute;left:0;bottom:0;height:3px;background:var(--red)}
+.bus.idle .rem{color:var(--dim);font-size:16px;font-weight:600;font-family:inherit;padding:7px 0}
+.info{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px;color:var(--muted);line-height:1.55}
+.info b{color:var(--text)}
+.info code{font-family:var(--mono);color:#cfe0ff;user-select:all;font-size:12px}
+.ed{padding:12px}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:11px;font-weight:700;letter-spacing:.8px;color:var(--muted);margin-bottom:5px;text-transform:uppercase}
+.txt{width:100%;height:32px;padding:0 10px;border-radius:6px;border:1px solid var(--line2);background:#0e1115;outline:none}
+.txt:focus{border-color:var(--accent)}
+.ed .seg{flex-wrap:wrap}.ed .seg button{flex:1}
+.hint{font-size:12px;color:var(--dim);margin-top:4px}
+.meta{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:12px;color:var(--muted);margin-bottom:14px}
+.meta b{color:var(--text);font-weight:500}
+input[type=range]{width:100%;accent-color:var(--accent)}
+#modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:100}
+#modal.on{display:flex}
+.dlg{width:min(520px,92vw);background:var(--panel);border:1px solid var(--line2);border-radius:12px;padding:18px 20px;box-shadow:0 20px 60px rgba(0,0,0,.6)}
+.dlg h3{margin:0 0 12px;font-size:16px}
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);background:#1d232b;border:1px solid var(--line2);padding:10px 16px;border-radius:8px;opacity:0;transition:.25s;pointer-events:none;z-index:120;max-width:80vw}
+#toast.on{opacity:1;transform:translateX(-50%)}
+@media (max-width:1250px){
+  main{grid-template-columns:270px minmax(0,1fr) 250px}
+  .row .th{width:64px;height:36px}
+  .take{grid-template-columns:1fr 1fr}
+  .take button{height:52px;font-size:13px}
+  .bus .rem{font-size:22px}
+}
+@media (max-width:900px){
+  main{grid-template-columns:220px minmax(0,1fr)}
+  main>.col:last-child{display:none}
+  .buses{grid-template-columns:1fr}
+}
+kbd{font-family:var(--mono);font-size:11px;padding:1px 5px;border-radius:4px;background:var(--panel3);border:1px solid var(--line2)}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="brand"><div class="mark"><i></i></div>ScènePro Programmes</div>
+    <button class="pill bad" id="conn" title="Connexion à la régie"><i class="led"></i><span id="connLbl">HORS LIGNE</span></button>
+    <div class="spacer"></div>
+    <button class="btn danger" id="btnStopAll" title="Arrêter tous les programmes et rendre l'antenne à la régie">TOUT RENDRE</button>
+    <div class="clock" id="clock">00:00:00</div>
+  </header>
+  <main>
+    <section class="col">
+      <div class="colhead">Bibliothèque<span class="spacer"></span><span id="libCount" style="letter-spacing:0;font-weight:500"></span></div>
+      <div class="drop" id="drop"><b>+ Ajouter des programmes</b><br>reportages, clips, jingles — glissez les fichiers ici ou cliquez<br><small>MP4 (H.264) conseillé · WebM · MOV · MP3 / WAV</small></div>
+      <div class="scroll" id="list"></div>
+    </section>
+    <section class="center">
+      <div>
+        <div class="monhead"><span class="t">APERÇU</span><small id="pvName">aucun programme sélectionné</small>
+          <button class="btn sm" id="pvMute" title="Écouter l'aperçu sur ce poste">SON APERÇU : COUPÉ</button></div>
+        <div class="screen"><video id="pv" playsinline preload="metadata" muted></video><div class="none" id="pvNone">SÉLECTIONNEZ UN PROGRAMME</div></div>
+        <div class="scrub">
+          <button class="btn sm" id="pvPlay" title="Lire / pause l'aperçu">▶</button>
+          <button class="btn sm" id="pvStart" title="Revenir au début">⏮</button>
+          <input type="range" id="pvPos" min="0" max="1000" value="0">
+          <span class="tc" id="pvTc">00:00 / 00:00</span>
+        </div>
+      </div>
+      <div class="opts">
+        <span class="lbl">ENVOYER SUR</span>
+        <div class="seg bus" id="busSeg"><button data-bus="1">PGM 1</button><button data-bus="2">PGM 2</button><button data-bus="3">PGM 3</button></div>
+        <span class="lbl" style="margin-left:6px">TRANSITION</span>
+        <div class="seg" id="transSeg"><button data-t="fade">FONDU</button><button data-t="cut">CUT</button></div>
+        <label class="chk" title="Le programme démarre à l'endroit où se trouve l'aperçu au lieu du début"><input type="checkbox" id="fromPv"> partir du point de l'aperçu</label>
+      </div>
+      <div class="take">
+        <button class="go" id="btnTake">ENVOYER À L'ANTENNE<small>Entrée — programme sélectionné</small></button>
+        <button class="back" id="btnBack">RENDRE L'ANTENNE<small>Échap — retour à la régie</small></button>
+        <button id="btnPause">PAUSE<small>Espace</small></button>
+        <button id="btnRestart">AU DÉBUT<small>Retour arrière</small></button>
+      </div>
+      <div class="buses" id="buses"></div>
+      <div class="info">
+        <b>Fonctionnement.</b> Ajoutez vos reportages dans la bibliothèque : ils sont copiés sur l'ordinateur de la régie (<code id="srvUrl"></code>), puis lus par la régie elle-même — pas de coupure si ce poste est sur le Wi-Fi.
+        <b>Envoyer à l'antenne</b> remplace le programme choisi (et ses sorties : salle, web…) par le reportage ; à la fin, l'antenne revient automatiquement à ce qui passait avant (réglable par programme). Le son passe dans la table de mixage de la régie (PGM 1).<br>
+        <b>Stream Deck / Companion</b> : <code id="apiUrl"></code> — actions <code>take/N</code> (N = numéro dans la bibliothèque), <code>stop</code>, <code>pause</code>, <code>restart</code>, <code>stopall</code>, avec <code>&amp;bus=2</code> pour le PGM 2.<br>
+        Raccourcis : <kbd>↑</kbd> <kbd>↓</kbd> sélection · <kbd>Entrée</kbd> envoyer · <kbd>Échap</kbd> rendre l'antenne · <kbd>Espace</kbd> pause · <kbd>F1</kbd> <kbd>F2</kbd> <kbd>F3</kbd> programme visé.
+      </div>
+    </section>
+    <section class="col">
+      <div class="colhead">Réglages du programme</div>
+      <div class="scroll"><div class="ed" id="ed"></div></div>
+    </section>
+  </main>
+</div>
+<div id="modal"><div class="dlg" id="dlg"></div></div>
+<div id="toast"></div>
+<input type="file" id="fileIn" accept="video/*,audio/*,.mp4,.m4v,.mov,.webm,.mkv,.mp3,.wav,.m4a,.aac" multiple hidden>
+<script>
+'use strict';
+const $ = s => document.querySelector(s);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+function fmt(s){ if(!isFinite(s) || s < 0) s = 0; s = Math.floor(s); const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), x = s % 60;
+  return (h ? h + ':' + String(m).padStart(2, '0') : String(m).padStart(2, '0')) + ':' + String(x).padStart(2, '0'); }
+const size = n => n > 1073741824 ? (n / 1073741824).toFixed(1).replace('.', ',') + ' Go' : Math.max(1, Math.round(n / 1048576)) + ' Mo';
+const EXT = ['mp4', 'm4v', 'mov', 'webm', 'mkv', 'ogv', 'mp3', 'wav', 'm4a', 'aac'];
+const AUDIO = ['mp3', 'wav', 'm4a', 'aac'];
+const END = [['back', 'Rendre l\'antenne'], ['black', 'Fondu au noir'], ['hold', 'Figer la fin'], ['loop', 'En boucle']];
+const PREFS_KEY = 'scenepro-programmes-v1';
+
+let items = [], status = null, regies = 0, token = '', uploads = [];
+const P = Object.assign({sel: null, bus: 1, trans: 'fade', fromPv: false, pvMuted: true}, (() => { try{ return JSON.parse(localStorage.getItem(PREFS_KEY)) || {}; }catch(e){ return {}; } })());
+const savePrefs = () => { try{ localStorage.setItem(PREFS_KEY, JSON.stringify(P)); }catch(e){} };
+const sel = () => items.find(i => i.id === P.sel) || null;
+const busOf = n => status && status.buses ? status.buses.find(b => b.pgm === n) : null;
+const onAirBuses = id => status && status.buses ? status.buses.filter(b => b.prog === id).map(b => b.pgm) : [];
+
+/* ---------------- code d'accès (autre ordinateur que la régie) ---------------- */
+const Access = {
+  remote: !/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname),
+  code(){
+    const q = new URLSearchParams(location.search).get('code');
+    if(q){ try{ localStorage.setItem('scenepro-code', q); }catch(e){} return q; }
+    try{ return localStorage.getItem('scenepro-code') || ''; }catch(e){ return ''; }
+  },
+  ask(){
+    modal(`<h3>Connexion à la régie ${esc(location.host)}</h3>
+      <p class="hint" style="margin-bottom:12px">Ce poste est sur un autre ordinateur que la régie. Tapez le <b>code d'accès à 6 chiffres</b> affiché dans ScènePro : menu <b>Sorties › Accès réseau (autres ordinateurs)</b>.</p>
+      <input class="txt" id="acCode" inputmode="numeric" maxlength="6" placeholder="000000" style="font:700 28px var(--mono);height:54px;text-align:center;letter-spacing:8px">
+      <div class="hint" id="acErr" style="color:#ff9d9d;margin:6px 0 10px">${this.code() ? 'Le code enregistré n\'est plus valable.' : ''}</div>
+      <button class="btn primary block" id="acOk">Se connecter</button>`);
+    const i = $('#acCode'); i.focus();
+    const go = () => { const c = i.value.replace(/\D/g, ''); if(c.length !== 6){ $('#acErr').textContent = 'Le code fait 6 chiffres.'; return; }
+      try{ localStorage.setItem('scenepro-code', c); }catch(e){} if(new URLSearchParams(location.search).get('code')) history.replaceState(null, '', location.pathname);
+      closeModal(); Net.connect(); };
+    $('#acOk').onclick = go; i.onkeydown = e => { if(e.key === 'Enter') go(); };
+  },
+};
+const mediaUrl = id => `/prog/media/${id}` + (Access.remote ? '?k=' + encodeURIComponent(Access.code()) : '');
+const api = (path, opts = {}) => fetch(path, Object.assign({cache: 'no-store'}, opts, {headers: Object.assign({'x-scenepro-code': Access.code()}, opts.headers || {})}))
+  .then(async r => { let j = {}; try{ j = await r.json(); }catch(e){} if(!r.ok || !j.ok) throw new Error(j.error || ('erreur ' + r.status)); return j; });
+
+/* ---------------- connexion ---------------- */
+const Net = {
+  ws: null, ok: false,
+  connect(){
+    if(!/^https?:/.test(location.protocol)){ setConn(false, 'OUVRIR DEPUIS SCÈNEPRO'); return; }
+    const ws = new WebSocket(`ws://${location.host}/prog?k=${encodeURIComponent(Access.code())}`);
+    this.ws = ws;
+    ws.onopen = () => { this.ok = true; setConn(true); };
+    ws.onmessage = e => {
+      let m; try{ m = JSON.parse(e.data); }catch(err){ return; }
+      if(m.type === 'list'){ items = m.items || []; if(!sel() && items.length) select(items[0].id); else if(!sel()) P.sel = null; loadPreview(); renderList(); renderEd(); }
+      else if(m.type === 'peers'){ regies = m.regies || 0; token = m.token || token; status = m.s || (regies ? status : null); setConn(true); showUrls(); renderBuses(); renderList(); }
+      else if(m.type === 'status'){ status = m.s; regies = m.regies || regies; renderBuses(); renderList(); }
+      else if(m.type === 'error') toast('Refusé : ' + m.error);
+    };
+    ws.onclose = e => {
+      this.ok = false; status = null; renderBuses();
+      if(e.code === 4401){ setConn(false, 'CODE D\'ACCÈS REQUIS'); Access.ask(); return; }
+      if(e.code === 4403){ setConn(false, 'ACCÈS BLOQUÉ'); toast('Accès refusé : trop de codes faux (réessai dans 2 min) ou accès réseau désactivé.'); setTimeout(() => this.connect(), 30000); return; }
+      setConn(false); setTimeout(() => this.connect(), 2000);
+    };
+  },
+  send(o){
+    if(!this.ws || this.ws.readyState !== 1){ toast('Pas connecté à la régie.'); return false; }
+    if(!regies){ toast('La régie ScènePro est fermée : ouvrez-la pour envoyer à l\'antenne.'); return false; }
+    this.ws.send(JSON.stringify(o)); return true;
+  },
+};
+function setConn(ok, txt){
+  const c = $('#conn');
+  c.className = 'pill ' + (!ok ? 'bad' : regies ? 'ok' : 'wait');
+  $('#connLbl').textContent = txt || (!ok ? 'NON CONNECTÉ' : regies ? 'RÉGIE CONNECTÉE' + (Access.remote ? ' · ' + location.hostname : '') : 'SERVEUR OK — RÉGIE FERMÉE');
+}
+function showUrls(){
+  $('#srvUrl').textContent = location.origin;
+  $('#apiUrl').textContent = location.origin + '/api/progcmd/take/1?k=' + (token || '…') + '&bus=1';
+}
+
+/* ---------------- bibliothèque ---------------- */
+function renderList(){
+  const L = $('#list');
+  $('#libCount').textContent = items.length ? items.length + ' programme' + (items.length > 1 ? 's' : '') : '';
+  const up = uploads.map(u => `<div class="row up"><div class="num"></div><div class="th" style="${u.thumb ? `background-image:url(${u.thumb})` : ''}"></div>
+    <div class="nm"><b>${esc(u.name)}</b><small>${u.err ? '<span style="color:#ff9d9d">' + esc(u.err) + '</span>' : 'Envoi vers la régie… ' + Math.round(u.pct * 100) + ' % · ' + size(u.size)}</small></div>
+    ${u.err ? `<button class="btn sm" data-dismiss="${u.key}">OK</button>` : `<button class="btn sm danger" data-cancel="${u.key}" title="Annuler l'envoi">✕</button>`}
+    <div class="bar" style="width:${u.pct * 100}%"></div></div>`).join('');
+  const rows = items.map((it, i) => {
+    const air = onAirBuses(it.id), b = air.length ? busOf(air[0]) : null;
+    return `<div class="row ${it.id === P.sel ? 'sel' : ''} ${air.length ? 'on' : ''}" data-id="${it.id}" draggable="true">
+      <div class="num">${i + 1}</div>
+      <div class="th" style="${it.thumb ? `background-image:url(${it.thumb})` : ''}">${it.duration ? `<span>${fmt(it.duration)}</span>` : ''}</div>
+      <div class="nm"><b>${esc(it.name)}</b><small>${END.find(e => e[0] === (it.endAction || 'back'))[1]} · ${it.ext.toUpperCase()} · ${size(it.size)}</small></div>
+      ${air.length ? `<span class="air">PGM ${air.join('+')}</span>` : ''}
+      ${b && b.dur ? `<div class="bar" style="width:${clamp(b.t / b.dur, 0, 1) * 100}%"></div>` : ''}</div>`;
+  }).join('');
+  L.innerHTML = up + (rows || (uploads.length ? '' : '<div class="empty">Aucun programme.<br>Ajoutez vos reportages, clips ou jingles<br>avec le cadre ci-dessus.</div>'));
+}
+$('#list').addEventListener('click', e => {
+  const c = e.target.closest('[data-cancel]'); if(c){ const u = uploads.find(x => x.key === c.dataset.cancel); if(u && u.xhr) u.xhr.abort(); return; }
+  const d = e.target.closest('[data-dismiss]'); if(d){ uploads = uploads.filter(x => x.key !== d.dataset.dismiss); renderList(); return; }
+  const r = e.target.closest('.row[data-id]'); if(r) select(r.dataset.id);
+});
+$('#list').addEventListener('dblclick', e => { const r = e.target.closest('.row[data-id]'); if(r){ select(r.dataset.id); take(); } });
+// réorganiser par glisser-déposer
+let dragId = null;
+$('#list').addEventListener('dragstart', e => { const r = e.target.closest('.row[data-id]'); if(!r) return; dragId = r.dataset.id; r.classList.add('drag'); e.dataTransfer.effectAllowed = 'move'; });
+$('#list').addEventListener('dragend', () => { dragId = null; document.querySelectorAll('.row').forEach(r => r.classList.remove('drag', 'dropAbove')); });
+$('#list').addEventListener('dragover', e => {
+  if(!dragId) return; e.preventDefault();
+  document.querySelectorAll('.row').forEach(r => r.classList.remove('dropAbove'));
+  const r = e.target.closest('.row[data-id]'); if(r) r.classList.add('dropAbove');
+});
+$('#list').addEventListener('drop', e => {
+  if(!dragId) return; e.preventDefault();
+  const r = e.target.closest('.row[data-id]'), ids = items.map(i => i.id).filter(id => id !== dragId);
+  const at = r ? ids.indexOf(r.dataset.id) : ids.length; ids.splice(at < 0 ? ids.length : at, 0, dragId);
+  items.sort((a, b) => ids.indexOf(a.id) - ids.indexOf(b.id)); renderList();
+  api('/api/prog/order', {method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ids})}).catch(err => toast('Réorganisation impossible : ' + err.message));
+});
+
+function select(id){
+  if(P.sel === id && $('#pv').dataset.id === id) return;
+  P.sel = id; savePrefs();
+  loadPreview(); renderList(); renderEd();
+}
+
+/* ---------------- ajout de fichiers ---------------- */
+$('#drop').onclick = () => $('#fileIn').click();
+$('#fileIn').onchange = e => { addFiles([...e.target.files]); e.target.value = ''; };
+['dragenter', 'dragover'].forEach(t => document.addEventListener(t, e => { if(dragId || !e.dataTransfer || ![...e.dataTransfer.types].includes('Files')) return; e.preventDefault(); $('#drop').classList.add('over'); }));
+['dragleave', 'drop'].forEach(t => document.addEventListener(t, e => { if(t === 'dragleave' && e.relatedTarget) return; $('#drop').classList.remove('over'); }));
+document.addEventListener('drop', e => { if(dragId || !e.dataTransfer || !e.dataTransfer.files.length) return; e.preventDefault(); addFiles([...e.dataTransfer.files]); });
+
+// vignette + durée lues sur ce poste avant l'envoi
+function probe(file){
+  return new Promise(res => {
+    const url = URL.createObjectURL(file), out = {duration: null, thumb: null, playable: false};
+    const done = () => { clearTimeout(to); URL.revokeObjectURL(url); res(out); };
+    const to = setTimeout(done, 10000);
+    const audio = AUDIO.includes(ext(file.name)) || (file.type || '').startsWith('audio/');
+    const v = document.createElement(audio ? 'audio' : 'video'); v.muted = true; v.preload = 'auto';
+    v.onloadedmetadata = () => {
+      out.duration = isFinite(v.duration) ? v.duration : null; out.playable = true;
+      if(audio || !v.videoWidth) return done();
+      v.currentTime = Math.min(2, (v.duration || 0) * 0.15);
+    };
+    v.onseeked = () => {
+      try{ const cv = document.createElement('canvas'); cv.width = 320; cv.height = 180; const g = cv.getContext('2d');
+        g.fillStyle = '#000'; g.fillRect(0, 0, 320, 180); const k = Math.min(320 / v.videoWidth, 180 / v.videoHeight);
+        g.drawImage(v, (320 - v.videoWidth * k) / 2, (180 - v.videoHeight * k) / 2, v.videoWidth * k, v.videoHeight * k); out.thumb = cv.toDataURL('image/jpeg', .78); }catch(e){}
+      done();
+    };
+    v.onerror = done;
+    v.src = url;
+  });
+}
+const ext = n => (n.split('.').pop() || '').toLowerCase();
+let upSeq = 0, upBusy = false;
+async function addFiles(files){
+  const ok = files.filter(f => EXT.includes(ext(f.name)));
+  if(ok.length < files.length) toast((files.length - ok.length) + ' fichier(s) ignoré(s) : format non pris en charge.');
+  for(const f of ok) uploads.push({key: 'u' + (++upSeq), file: f, name: f.name.replace(/\.[^.]+$/, ''), size: f.size, pct: 0, thumb: null, err: null, xhr: null, started: false});
+  renderList();
+  if(!upBusy) runUploads();
+}
+async function runUploads(){
+  upBusy = true;
+  let u;
+  while((u = uploads.find(x => !x.started))){
+    u.started = true;
+    const info = await probe(u.file); u.thumb = info.thumb; renderList();
+    if(!info.playable) toast(`« ${u.name} » : ce format risque de ne pas être lisible par la régie (préférez du MP4 H.264).`);
+    try{
+      const item = await upload(u);
+      const meta = {}; if(info.duration) meta.duration = info.duration; if(info.thumb) meta.thumb = info.thumb;
+      if(Object.keys(meta).length) await api('/api/prog/' + item.id, {method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(meta)}).catch(() => {});
+      uploads = uploads.filter(x => x !== u);
+      if(!P.sel) select(item.id);
+    }catch(err){ u.err = err.message; }
+    renderList();
+  }
+  upBusy = false;
+}
+function upload(u){
+  return new Promise((res, rej) => {
+    const x = new XMLHttpRequest(); u.xhr = x;
+    x.open('POST', `/api/prog/upload?name=${encodeURIComponent(u.name)}&ext=${encodeURIComponent(ext(u.file.name))}`);
+    x.setRequestHeader('x-scenepro-code', Access.code());
+    x.setRequestHeader('Content-Type', 'application/octet-stream');
+    let last = 0;
+    x.upload.onprogress = e => { if(e.lengthComputable){ u.pct = e.loaded / e.total; if(Date.now() - last > 250){ last = Date.now(); renderList(); } } };
+    x.onload = () => { let j = {}; try{ j = JSON.parse(x.responseText); }catch(e){} if(x.status === 200 && j.ok) res(j.item); else rej(new Error(j.error || 'envoi refusé (' + x.status + ')')); };
+    x.onerror = () => rej(new Error('envoi impossible (réseau)'));
+    x.onabort = () => rej(new Error('envoi annulé'));
+    x.send(u.file);
+  });
+}
+
+/* ---------------- aperçu local ---------------- */
+const pv = $('#pv');
+function loadPreview(){
+  const it = sel();
+  $('#pvName').textContent = it ? it.name : 'aucun programme sélectionné';
+  $('#pvNone').style.display = it ? 'none' : '';
+  if(!it){ pv.removeAttribute('src'); pv.dataset.id = ''; pv.load(); return; }
+  if(pv.dataset.id === it.id) return;
+  pv.dataset.id = it.id; pv.src = mediaUrl(it.id); pv.muted = P.pvMuted;
+  pv.poster = it.thumb || '';
+}
+function pvUpdate(){
+  const d = isFinite(pv.duration) ? pv.duration : 0;
+  $('#pvTc').textContent = fmt(pv.currentTime) + ' / ' + fmt(d);
+  if(!pvSeeking) $('#pvPos').value = d ? Math.round(pv.currentTime / d * 1000) : 0;
+  $('#pvPlay').textContent = pv.paused ? '▶' : '❚❚';
+}
+let pvSeeking = false;
+['timeupdate', 'loadedmetadata', 'play', 'pause', 'seeked'].forEach(t => pv.addEventListener(t, pvUpdate));
+pv.addEventListener('error', () => { if(pv.dataset.id) $('#pvTc').textContent = 'lecture impossible ici'; });
+$('#pvPos').oninput = () => { pvSeeking = true; if(isFinite(pv.duration)) pv.currentTime = $('#pvPos').value / 1000 * pv.duration; };
+$('#pvPos').onchange = () => { pvSeeking = false; };
+$('#pvPlay').onclick = () => { if(!sel()) return; if(pv.paused) pv.play().catch(() => {}); else pv.pause(); };
+$('#pvStart').onclick = () => { pv.currentTime = 0; };
+$('#pvMute').onclick = () => { P.pvMuted = !P.pvMuted; pv.muted = P.pvMuted; savePrefs(); renderOpts(); };
+
+/* ---------------- antenne ---------------- */
+function take(){
+  const it = sel(); if(!it){ toast('Sélectionnez un programme.'); return; }
+  const startAt = P.fromPv && isFinite(pv.currentTime) ? pv.currentTime : 0;
+  if(Net.send({type: 'take', id: it.id, bus: P.bus, fade: P.trans === 'cut' ? 0 : null, startAt})){
+    if(!pv.paused) pv.pause();
+  }
+}
+function giveBack(bus = P.bus){
+  const b = busOf(bus);
+  if(!b || !b.prog){ toast(`Aucun programme à l'antenne sur le PGM ${bus}.`); return; }
+  Net.send({type: 'stop', bus, fade: P.trans === 'cut' ? 0 : null});
+}
+$('#btnTake').onclick = take;
+$('#btnBack').onclick = () => giveBack();
+$('#btnPause').onclick = () => { const b = busOf(P.bus); if(b && b.prog) Net.send({type: 'pause', bus: P.bus}); };
+$('#btnRestart').onclick = () => { const b = busOf(P.bus); if(b && b.prog) Net.send({type: 'restart', bus: P.bus}); };
+$('#btnStopAll').onclick = () => { if(status && status.buses.some(b => b.prog)) Net.send({type: 'stopall', fade: P.trans === 'cut' ? 0 : null}); };
+$('#busSeg').onclick = e => { const b = e.target.closest('[data-bus]'); if(b) setBus(+b.dataset.bus); };
+$('#transSeg').onclick = e => { const b = e.target.closest('[data-t]'); if(b){ P.trans = b.dataset.t; savePrefs(); renderOpts(); } };
+$('#fromPv').onchange = e => { P.fromPv = e.target.checked; savePrefs(); };
+function setBus(n){ P.bus = clamp(n, 1, 3); savePrefs(); renderOpts(); renderBuses(); }
+function renderOpts(){
+  document.querySelectorAll('#busSeg button').forEach(b => b.classList.toggle('on', +b.dataset.bus === P.bus));
+  document.querySelectorAll('#transSeg button').forEach(b => b.classList.toggle('on', b.dataset.t === P.trans));
+  $('#fromPv').checked = !!P.fromPv;
+  $('#pvMute').textContent = 'SON APERÇU : ' + (P.pvMuted ? 'COUPÉ' : 'ACTIF');
+}
+function renderBuses(){
+  const el = $('#buses');
+  el.innerHTML = [1, 2, 3].map(n => {
+    const b = busOf(n);
+    if(!b) return `<div class="bus idle ${n === P.bus ? 'tgt' : ''}" data-bus="${n}"><div class="bh">PGM ${n}</div><div class="bn">—</div><div class="rem">${regies ? '…' : 'régie fermée'}</div><div class="sub"></div></div>`;
+    const routes = (b.routes || []).map(r => `<i class="${r === 'WEB' ? 'web' : ''}">${r}</i>`).join('');
+    if(!b.prog) return `<div class="bus idle ${n === P.bus ? 'tgt' : ''}" data-bus="${n}"><div class="bh">PGM ${n} ${routes}</div>
+      <div class="bn" title="${esc(b.name || '')}">${b.name ? esc(b.name) : '<span style="color:var(--dim)">vide</span>'}</div><div class="rem">${b.black ? 'NOIR' : b.follow ? 'suit le PGM 1' : 'régie'}</div><div class="sub">aucun programme</div></div>`;
+    const it = items.find(i => i.id === b.prog), loop = it && it.endAction === 'loop';
+    const rem = b.dur ? b.dur - b.t : 0, cls = loop || !b.dur ? '' : rem <= 10 ? 'crit' : rem <= 30 ? 'warn' : '';
+    return `<div class="bus prog ${n === P.bus ? 'tgt' : ''}" data-bus="${n}"><div class="bh">PGM ${n} ${routes}${b.paused ? '<i>PAUSE</i>' : ''}</div>
+      <div class="bn" title="${esc(b.name)}">${esc(b.name)}</div>
+      <div class="rem ${cls}">${b.dur ? '−' + fmt(rem) : fmt(b.t)}</div>
+      <div class="sub">${fmt(b.t)} / ${fmt(b.dur)} · ${loop ? 'en boucle' : it ? END.find(e => e[0] === (it.endAction || 'back'))[1].toLowerCase() + ' à la fin' : ''}</div>
+      ${b.dur ? `<div class="pb" style="width:${clamp(b.t / b.dur, 0, 1) * 100}%"></div>` : ''}</div>`;
+  }).join('');
+  const t = busOf(P.bus), on = !!(t && t.prog);
+  $('#btnBack').disabled = !on; $('#btnPause').disabled = !on; $('#btnRestart').disabled = !on;
+  $('#btnPause').firstChild.textContent = t && t.prog && t.paused ? 'REPRISE' : 'PAUSE';
+  $('#btnTake').disabled = !sel() || !regies;
+  $('#btnStopAll').disabled = !(status && status.buses && status.buses.some(b => b.prog));
+}
+$('#buses').onclick = e => { const b = e.target.closest('[data-bus]'); if(b) setBus(+b.dataset.bus); };
+
+/* ---------------- réglages du programme ---------------- */
+function renderEd(){
+  const it = sel(), ed = $('#ed');
+  if(!it){ ed.innerHTML = '<div class="empty">Sélectionnez un programme dans la bibliothèque.</div>'; renderBuses(); return; }
+  if(ed.dataset.id === it.id && ed.contains(document.activeElement) && document.activeElement.tagName === 'INPUT'){ return; }
+  ed.dataset.id = it.id;
+  ed.innerHTML = `
+    <div class="field"><label>Nom</label><input class="txt" id="edName" value="${esc(it.name)}"></div>
+    <div class="meta"><span>Durée</span><b>${it.duration ? fmt(it.duration) : '—'}</b><span>Fichier</span><b>${it.ext.toUpperCase()} · ${size(it.size)}</b>
+      <span>Ajouté</span><b>${new Date(it.addedAt).toLocaleString('fr-FR')}</b></div>
+    <div class="field"><label>À la fin du programme</label>
+      <div class="seg" id="edEnd">${END.map(([k, l]) => `<button data-e="${k}" class="${(it.endAction || 'back') === k ? 'on' : ''}">${l}</button>`).join('')}</div>
+      <div class="hint">${{back: 'L\'antenne revient à ce qui passait avant le programme, là où il en était.', black: 'Fondu au noir : la régie reprend la main ensuite.',
+        hold: 'La dernière image reste à l\'antenne jusqu\'à « Rendre l\'antenne ».', loop: 'Le programme tourne en boucle (attente, habillage de pause…).'}[it.endAction || 'back']}</div></div>
+    <div class="field"><label>Volume dans la régie — <span id="edVolV">${Math.round((it.volume == null ? 1 : it.volume) * 100)} %</span></label>
+      <input type="range" id="edVol" min="0" max="100" value="${Math.round((it.volume == null ? 1 : it.volume) * 100)}">
+      <div class="hint">Pris en compte au prochain envoi à l'antenne.</div></div>
+    <div style="height:1px;background:var(--line);margin:18px 0"></div>
+    <button class="btn danger block" id="edDel">Supprimer de la bibliothèque</button>
+    <div class="hint">Le fichier copié sur la régie est effacé ; l'original sur votre disque n'est pas touché.</div>`;
+  const put = o => api('/api/prog/' + it.id, {method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(o)}).catch(err => toast('Enregistrement impossible : ' + err.message));
+  let nt;
+  $('#edName').oninput = e => { clearTimeout(nt); const v = e.target.value; nt = setTimeout(() => { if(v.trim()){ it.name = v.trim(); put({name: it.name}); renderList(); } }, 400); };
+  $('#edEnd').onclick = e => { const b = e.target.closest('[data-e]'); if(!b) return; it.endAction = b.dataset.e; put({endAction: it.endAction}); ed.dataset.id = ''; renderEd(); renderList(); };
+  let vt;
+  $('#edVol').oninput = e => { $('#edVolV').textContent = e.target.value + ' %'; clearTimeout(vt); vt = setTimeout(() => { it.volume = e.target.value / 100; put({volume: it.volume}); }, 250); };
+  $('#edDel').onclick = () => {
+    if(onAirBuses(it.id).length){ toast('Ce programme est à l\'antenne : rendez l\'antenne avant de le supprimer.'); return; }
+    if(!confirm(`Supprimer « ${it.name} » de la bibliothèque ?`)) return;
+    const i = items.indexOf(it), next = items[i + 1] || items[i - 1];
+    api('/api/prog/' + it.id, {method: 'DELETE'}).then(() => { P.sel = next ? next.id : null; savePrefs(); loadPreview(); }).catch(err => toast('Suppression impossible : ' + err.message));
+  };
+  renderBuses();
+}
+
+/* ---------------- clavier ---------------- */
+document.addEventListener('keydown', e => {
+  if($('#modal').classList.contains('on')) return;
+  if(e.target.tagName === 'INPUT' && e.target.type !== 'range' && e.target.type !== 'checkbox') return;
+  const i = items.findIndex(x => x.id === P.sel);
+  if(e.key === 'ArrowDown'){ e.preventDefault(); if(items[i + 1]) select(items[i + 1].id); }
+  else if(e.key === 'ArrowUp'){ e.preventDefault(); if(items[i - 1]) select(items[i - 1].id); }
+  else if(e.key === 'Enter'){ e.preventDefault(); take(); }
+  else if(e.key === 'Escape'){ e.preventDefault(); giveBack(); }
+  else if(e.key === ' '){ e.preventDefault(); $('#btnPause').click(); }
+  else if(e.key === 'Backspace'){ e.preventDefault(); $('#btnRestart').click(); }
+  else if(/^F[123]$/.test(e.key)){ e.preventDefault(); setBus(+e.key[1]); }
+});
+
+/* ---------------- divers ---------------- */
+function modal(html){ $('#dlg').innerHTML = html; $('#modal').classList.add('on'); }
+function closeModal(){ $('#modal').classList.remove('on'); }
+let toastT;
+function toast(msg){ const t = $('#toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('on'), 4200); }
+setInterval(() => { $('#clock').textContent = new Date().toLocaleTimeString('fr-FR'); }, 500);
+window.addEventListener('beforeunload', e => { if(uploads.some(u => !u.err)){ e.preventDefault(); e.returnValue = ''; } });
+
+renderOpts(); renderList(); renderEd(); renderBuses(); showUrls();
+Net.connect();
+</script>
+</body>
+</html>

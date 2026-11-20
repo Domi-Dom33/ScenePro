@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- ScènePro Diffusion : socle commun de la famille + antenne émettrice rouge -->
+  <defs>
+    <linearGradient id="socle" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#222730"/>
+      <stop offset="1" stop-color="#0c0e12"/>
+    </linearGradient>
+    <linearGradient id="rouge" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ff5c5c"/>
+      <stop offset="1" stop-color="#e3262b"/>
+    </linearGradient>
+  </defs>
+  <rect x="16" y="16" width="480" height="480" rx="110" fill="url(#socle)"/>
+  <g fill="none" stroke="url(#rouge)" stroke-linecap="round" stroke-linejoin="round" stroke-width="30">
+    <!-- ondes -->
+    <path d="M318.8 151.3 A82 82 0 0 1 318.8 256.7"/>
+    <path d="M193.2 151.3 A82 82 0 0 0 193.2 256.7"/>
+    <path d="M370.9 107.6 A150 150 0 0 1 370.9 300.4"/>
+    <path d="M141.1 107.6 A150 150 0 0 0 141.1 300.4"/>
+    <!-- mât -->
+    <path d="M256 236 L204 416 M256 236 L308 416 M222 352 L290 352"/>
+  </g>
+  <!-- émetteur -->
+  <circle cx="256" cy="204" r="32" fill="url(#rouge)"/>
+</svg>
