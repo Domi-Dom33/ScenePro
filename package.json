@@ -1,7 +1,7 @@
 {
   "name": "scenepro",
   "productName": "ScènePro",
-  "version": "2.0.5",
+  "version": "2.0.6",
   "description": "Régie vidéo pour conférences et événements : 3 programmes, sorties HDMI, diffusion en ligne, mixage audio.",
   "main": "main.js",
   "author": "ScènePro",
@@ -127,7 +127,27 @@
     },
     "dmg": {
       "artifactName": "ScenePro-${version}-mac-${arch}.dmg",
-      "title": "ScènePro ${version}"
+      "title": "ScenePro ${version}",
+      "iconSize": 96,
+      "window": {
+        "x": 200,
+        "y": 160,
+        "width": 560,
+        "height": 380
+      },
+      "contents": [
+        {
+          "x": 150,
+          "y": 190,
+          "type": "file"
+        },
+        {
+          "x": 410,
+          "y": 190,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ]
     }
   },
   "repository": {
