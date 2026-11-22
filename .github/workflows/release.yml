@@ -1,6 +1,5 @@
-# Construit l'installateur Windows et le publie dans les « Releases » GitHub.
-# Se déclenche quand on pousse une étiquette de version (ex. : v2.0.1),
-# ou à la main depuis l'onglet « Actions ».
+# Construit les installateurs (Windows, Mac Apple et Mac Intel) et les publie dans les « Releases » GitHub.
+# Se déclenche quand on pousse une étiquette de version (ex. : v2.0.5), ou à la main depuis l'onglet « Actions ».
 name: Publier ScènePro
 
 on:
@@ -16,16 +15,40 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
-
       - name: Installer les dépendances
         run: npm ci
-
-      - name: Construire et publier l'installateur
+      - name: Construire et publier l'installateur Windows
         run: npx electron-builder --win --publish always
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Mac : une machine par type de processeur, pour que ffmpeg (inclus) corresponde au Mac.
+  # Lancé après Windows, qui crée la page de la version.
+  mac:
+    needs: windows
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-15          # Mac à puce Apple (M1, M2, M3, M4)
+            arch: arm64
+          - os: macos-15-intel    # Mac Intel
+            arch: x64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Installer les dépendances
+        run: npm ci
+      - name: Construire et publier l'application Mac (${{ matrix.arch }})
+        run: npx electron-builder --mac --${{ matrix.arch }} --publish always
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'

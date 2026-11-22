@@ -6,6 +6,26 @@
 'use strict';
 const { app, BrowserWindow, session, shell, dialog, Menu } = require('electron');
 const path = require('path');
+const { spawn } = require('child_process');
+const IS_MAC = process.platform === 'darwin';
+const ROLE = process.argv.includes('--diffusion') ? 'diffusion' : process.argv.includes('--synthe') ? 'synthe' : process.argv.includes('--enregistreur') ? 'enregistreur' : 'regie';
+
+// ouvre un autre poste (nouvelle instance de l'application avec son rôle) — sur Mac il n'y a pas de raccourcis dédiés
+function launchRole(flag) {
+  try { spawn(process.execPath, app.isPackaged ? [flag] : [app.getAppPath(), flag], { detached: true, stdio: 'ignore' }).unref(); }
+  catch (e) { dialog.showErrorBox('ScènePro', "Impossible d'ouvrir ce poste : " + e.message); }
+}
+// Mac : une barre de menus est indispensable (Cmd+Q, copier/coller des clés de stream…). Appliquée à chaque fenêtre de chaque poste.
+function macMenu() {
+  const poste = r => ({ label: { synthe: 'Poste Synthé', diffusion: 'Poste Diffusion', enregistreur: 'Poste Enregistrement' }[r], enabled: ROLE !== r, click: () => launchRole('--' + r) });
+  return Menu.buildFromTemplate([
+    { label: 'ScènePro', submenu: [{ role: 'about', label: 'À propos de ScènePro' }, { type: 'separator' }, { role: 'hide', label: 'Masquer ScènePro' }, { role: 'hideOthers', label: 'Masquer les autres' }, { role: 'unhide', label: 'Tout afficher' }, { type: 'separator' }, { role: 'quit', label: 'Quitter ScènePro' }] },
+    { label: 'Édition', submenu: [{ role: 'undo', label: 'Annuler' }, { role: 'redo', label: 'Rétablir' }, { type: 'separator' }, { role: 'cut', label: 'Couper' }, { role: 'copy', label: 'Copier' }, { role: 'paste', label: 'Coller' }, { role: 'selectAll', label: 'Tout sélectionner' }] },
+    { label: 'Postes', submenu: [poste('synthe'), poste('diffusion'), poste('enregistreur'), { type: 'separator' }, { label: 'Ouvrir la régie', enabled: ROLE !== 'regie', click: () => launchRole('--regie') }] },
+    { label: 'Fenêtre', submenu: [{ role: 'minimize', label: 'Réduire' }, { role: 'togglefullscreen', label: 'Plein écran' }, { role: 'zoom', label: 'Agrandir' }, { type: 'separator' }, { role: 'front', label: 'Tout ramener au premier plan' }] },
+  ]);
+}
+if (IS_MAC) app.on('browser-window-created', () => setImmediate(() => Menu.setApplicationMenu(macMenu())));
 const { startServer } = require('./server');
 
 // lecture automatique avec le son, et pas de ralentissement quand la régie est en arrière-plan
@@ -53,7 +73,7 @@ function createWindow() {
     autoHideMenuBar: true,
     webPreferences: { backgroundThrottling: false, contextIsolation: true, sandbox: true, spellcheck: false },
   });
-  Menu.setApplicationMenu(null);
+  Menu.setApplicationMenu(IS_MAC ? macMenu() : null);
   win.once('ready-to-show', () => { win.maximize(); win.show(); });
 
   // fenêtres de sortie (window.open('') depuis la régie) : autorisées, sans menu, fond noir
@@ -97,6 +117,19 @@ function setupUpdates() {
   if (!app.isPackaged) return;
   let autoUpdater;
   try { ({ autoUpdater } = require('electron-updater')); } catch (e) { return; }
+  if (IS_MAC) {
+    // Mac : sans certificat Apple, l'installation automatique est impossible → on prévient et on ouvre la page de téléchargement
+    autoUpdater.autoDownload = false;
+    autoUpdater.on('update-available', info => {
+      if (!win) return;
+      dialog.showMessageBox(win, { type: 'info', buttons: ['Télécharger', 'Plus tard'], defaultId: 0, cancelId: 1, title: 'Mise à jour de ScènePro',
+        message: `La version ${info.version} est disponible.`, detail: "Téléchargez le fichier .dmg correspondant à votre Mac et remplacez l'application. Ne le faites pas pendant un show." })
+        .then(r => { if (r.response === 0) shell.openExternal('https://github.com/Domi-Dom33/ScenePro/releases/latest'); });
+    });
+    autoUpdater.on('error', () => {});
+    setTimeout(() => autoUpdater.checkForUpdates().catch(() => {}), 8000);
+    return;
+  }
   autoUpdater.autoDownload = true;
   autoUpdater.autoInstallOnAppQuit = true;
   autoUpdater.on('update-downloaded', info => {

@@ -1,7 +1,7 @@
 {
   "name": "scenepro",
   "productName": "ScènePro",
-  "version": "2.0.4",
+  "version": "2.0.5",
   "description": "Régie vidéo pour conférences et événements : 3 programmes, sorties HDMI, diffusion en ligne, mixage audio.",
   "main": "main.js",
   "author": "ScènePro",
@@ -100,7 +100,35 @@
         "provider": "github",
         "releaseType": "release"
       }
-    ]
+    ],
+    "mac": {
+      "target": [
+        {
+          "target": "dmg"
+        },
+        {
+          "target": "zip"
+        }
+      ],
+      "category": "public.app-category.video",
+      "icon": "build/icons/regie.png",
+      "artifactName": "ScenePro-${version}-mac-${arch}.${ext}",
+      "identity": null,
+      "hardenedRuntime": false,
+      "gatekeeperAssess": false,
+      "extendInfo": {
+        "NSCameraUsageDescription": "ScènePro utilise vos cartes de capture et caméras pour les entrées live.",
+        "NSMicrophoneUsageDescription": "ScènePro utilise vos micros et cartes son pour la table de mixage.",
+        "NSLocalNetworkUsageDescription": "ScènePro se connecte aux autres postes ScènePro (Synthé, Diffusion, Enregistrement) de votre réseau local.",
+        "NSBonjourServices": [
+          "_scenepro._udp"
+        ]
+      }
+    },
+    "dmg": {
+      "artifactName": "ScenePro-${version}-mac-${arch}.dmg",
+      "title": "ScènePro ${version}"
+    }
   },
   "repository": {
     "type": "git",

@@ -12,7 +12,25 @@ Prévisualisation / Programme · 3 programmes · sorties HDMI · diffusion en li
 
 > Windows peut afficher « Windows a protégé votre ordinateur » (l'application n'est pas encore signée numériquement). Cliquez sur **Informations complémentaires › Exécuter quand même**.
 
-L'application se met à jour toute seule : quand une nouvelle version est publiée ici, ScènePro la télécharge et propose de redémarrer.
+### 🍎 Mac
+
+Sur la même page, prenez le fichier qui correspond à votre Mac :
+- **`ScenePro-x.y.z-mac-arm64.dmg`** pour un Mac à puce Apple (M1, M2, M3, M4) ;
+- **`ScenePro-x.y.z-mac-x64.dmg`** pour un Mac Intel.
+
+(Pour savoir lequel : menu  › À propos de ce Mac › « Puce » ou « Processeur ».)
+
+Ouvrez le .dmg et glissez ScènePro dans « Applications ». L'application n'est pas encore signée par Apple. Au premier lancement, faites un **clic droit sur ScènePro › Ouvrir**, puis « Ouvrir ». Si macOS indique que l'application « est endommagée », ouvrez le Terminal et tapez :
+
+```bash
+xattr -cr /Applications/ScènePro.app
+```
+
+Sur Mac, les postes Synthé, Diffusion et Enregistrement s'ouvrent depuis le menu **Postes** de la barre de menus. macOS demande l'autorisation pour la caméra, le micro et le réseau local : acceptez. Les nouvelles versions sont signalées par l'application, qui ouvre la page de téléchargement ; l'installation automatique n'existe que sous Windows.
+
+### Mises à jour
+
+L'application Windows se met à jour toute seule : quand une nouvelle version est publiée ici, ScènePro la télécharge et propose de redémarrer.
 
 ## 📸 Aperçu
 
